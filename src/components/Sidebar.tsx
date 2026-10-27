@@ -3,7 +3,6 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Star } from "lucide-react";
 import { getRecentChapters, getTopRatedManga } from "@/lib/mangadex";
-import { getAnilistPopularManga } from "@/lib/anilist";
 
 function SidebarSkeleton() {
   return (
@@ -17,27 +16,14 @@ function SidebarSkeleton() {
 async function SidebarContent() {
   await connection();
 
-  // Ambil Chapter Terbaru (MangaDex) & Top Rated dari MangaDex + AniList
-  const [recentChapters, mdxTopRated, aniPopular] = await Promise.all([
+  // HANYA AMBIL DARI MANGADEX
+  const [recentChapters, mdxTopRated] = await Promise.all([
     getRecentChapters(6),
     getTopRatedManga(6), 
-    getAnilistPopularManga()
   ]);
 
-  // Gabungkan Rating Tertinggi dari MangaDex dan AniList, lalu urutkan
-  const aniTopRated = aniPopular
-    .filter((c: any) => (c.rating || 0) > 0)
-    .map((c: any) => ({
-      id: c.id,
-      title: c.title,
-      img: c.img,
-      rating: c.rating || 0,
-      followers: c.readers || "AniList"
-    }));
-
-  const combinedTopRated = [...mdxTopRated, ...aniTopRated]
-    .sort((a, b) => b.rating - a.rating)
-    .slice(0, 6); // Ambil 6 teratas
+  // Ambil 6 teratas (jika getTopRatedManga belum membatasi)
+  const combinedTopRated = mdxTopRated.slice(0, 6); 
 
   return (
     <div className="space-y-12">
@@ -92,7 +78,7 @@ async function SidebarContent() {
       </div>
 
       {/* ========================================= */}
-      {/* 2. RATING TERTINGGI (MangaDex + AniList)  */}
+      {/* 2. RATING TERTINGGI (MangaDex)            */}
       {/* ========================================= */}
       {combinedTopRated.length > 0 && (
         <div>
@@ -104,7 +90,12 @@ async function SidebarContent() {
           
           <div className="flex flex-col gap-6">
             {combinedTopRated.map((manga, idx) => (
-              <Link key={manga.id} href={`/comic/${manga.id}`} className="flex gap-6 group items-center">
+              <Link 
+                key={manga.id} 
+                // Gunakan double encode untuk berjaga-jaga
+                href={`/comic/${encodeURIComponent(encodeURIComponent(manga.id))}`} 
+                className="flex gap-6 group items-center"
+              >
                 
                 <div className="relative w-24 h-36 md:w-32 md:h-48 flex-shrink-0 bg-white border-2 border-gray-900 shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-all duration-300 group-hover:shadow-none group-hover:translate-x-[4px] group-hover:translate-y-[4px] overflow-hidden">
                   <img 

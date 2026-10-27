@@ -3,33 +3,30 @@ import Hero from "@/components/Hero";
 import ComicGrid from "@/components/ComicGrid";
 import NewsFeed from "@/components/NewsFeed";
 import Sidebar from "@/components/Sidebar";
-// HAPUS IMPORT FOOTER DARI SINI
 import FeaturedSlider from "@/components/FeaturedSlider";
 import { getPopularManga } from "@/lib/mangadex"; 
-import { getAnilistPopularManga } from "@/lib/anilist";
 import { getKomikuPopularManga } from "@/lib/komiku";
 
+export const revalidate = 300; // Cache 5 menit
+
 const getCachedMangaDex = cache(getPopularManga);
-const getCachedAniList = cache(getAnilistPopularManga);
 const getCachedKomiku = cache(getKomikuPopularManga);
 
 const getHomepageData = cache(async () => {
   const results = await Promise.allSettled([
     getCachedMangaDex(),
-    getCachedAniList(),
     getCachedKomiku(1)
   ]);
 
   return {
     mdxRes: results[0].status === "fulfilled" ? results[0].value : { data: [], total: 0 },
-    aniRes: results[1].status === "fulfilled" ? results[1].value : [],
-    komikuRes: results[2].status === "fulfilled" ? results[2].value : { data: [], total: 0 }
+    komikuRes: results[1].status === "fulfilled" ? results[1].value : { data: [], total: 0 }
   };
 });
 
 async function HeroServer() {
-  const { mdxRes, aniRes, komikuRes } = await getHomepageData();
-  const combined = [...mdxRes.data, ...aniRes, ...komikuRes.data];
+  const { mdxRes, komikuRes } = await getHomepageData();
+  const combined = [...mdxRes.data, ...komikuRes.data];
   
   const heroSamples = combined.slice(0, 10).map((c: any) => ({
     id: c.id,
@@ -44,14 +41,13 @@ async function HeroServer() {
 }
 
 async function PopularComics() {
-  const { mdxRes, aniRes, komikuRes } = await getHomepageData();
+  const { mdxRes, komikuRes } = await getHomepageData();
 
   const combined = [];
   const mdxData = mdxRes.data;
-  const aniData = aniRes;
   const komikuData = komikuRes.data;
 
-  let mdxIdx = 0, aniIdx = 0, komikuIdx = 0;
+  let mdxIdx = 0, komikuIdx = 0;
   let count = 0;
   const limit = 20;
 
@@ -61,19 +57,18 @@ async function PopularComics() {
     if (count >= limit) break;
     if (komikuIdx < komikuData.length) { combined.push(komikuData[komikuIdx++]); count++; added = true; }
     if (count >= limit) break;
-    if (aniIdx < aniData.length) { combined.push(aniData[aniIdx++]); count++; added = true; }
-    if (count >= limit) break;
     if (!added) break;
   }
 
-  const totalCombined = mdxRes.total + aniRes.length + komikuRes.total;
+  const totalCombined = mdxRes.total + komikuRes.total;
 
   return <ComicGrid initialComics={combined} total={totalCombined} />;
 }
 
+// FUNGSI INI HANYA BOLEH ADA SATU
 async function FeaturedServer() {
-  const { mdxRes, aniRes, komikuRes } = await getHomepageData();
-  const combined = [...mdxRes.data, ...aniRes, ...komikuRes.data];
+  const { mdxRes, komikuRes } = await getHomepageData();
+  const combined = [...mdxRes.data, ...komikuRes.data];
   
   const sliced = combined.slice(5, 15);
   
@@ -155,8 +150,9 @@ function SliderSkeleton() {
   );
 }
 
-
-
+// ==========================================
+// MAIN PAGE
+// ==========================================
 export default function Home() {
   return (
     <div className="w-full flex-grow flex flex-col bg-[#f4f4f4] font-sans text-gray-900 selection:bg-amber-500 selection:text-white">
@@ -165,7 +161,6 @@ export default function Home() {
         <HeroServer />
       </Suspense>
 
-      {/* Pastikan tidak ada mb-12 atau margin bawah yang besar di sini */}
       <main className="flex-grow w-full max-w-7xl mx-auto px-4 py-10 flex flex-col lg:grid lg:grid-cols-12 gap-10">
         <div className="w-full lg:col-span-8 flex flex-col gap-12">
           <Suspense fallback={<ComicSkeleton />}>

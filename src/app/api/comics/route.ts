@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMangaByCategory, getMangaBySearch } from "@/lib/mangadex";
 import { getKomikuPopularManga, searchKomiku } from "@/lib/komiku";
-import { getAnilistPopularManga, getAnilistMangaBySearch } from "@/lib/anilist";
 
-// ISR 5 menit — jangan force-dynamic
 export const revalidate = 300;
 
 const CACHE_HEADERS = {
@@ -42,27 +40,6 @@ function filterCategory(data: any[], category: string) {
   });
 }
 
-function mapAniList(raw: any[]) {
-  return (raw || []).map((c: any) => {
-    let type = "Manga";
-    if (c.countryOfOrigin === "KR") type = "Manhwa";
-    else if (c.countryOfOrigin === "CN" || c.countryOfOrigin === "TW") type = "Manhua";
-    
-    return {
-      id: `anilist:${c.id}`,
-      title: c.title,
-      type,
-      // PERBAIKAN: Gunakan c.img (untuk katalog) ATAU c.coverImage (untuk search)
-      img: c.img || c.coverImage || "https://placehold.co/400x600/png?text=No+Image",
-      rating: c.averageScore || 0,
-      popularity: c.popularity || 0,
-      readers: c.popularity ? c.popularity.toLocaleString() : "AniList",
-      chapters: c.chapters ? String(c.chapters) : "?",
-      source: "anilist",
-    };
-  });
-}
-
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
@@ -73,33 +50,20 @@ export async function GET(req: NextRequest) {
   const query = searchParams.get("q") || "";
   const genre = searchParams.get("genre") || "Semua";
 
-  const t0 = Date.now();
-
   try {
-    // ==========================================
-    // SEARCH
-    // ==========================================
     if (query) {
-      const [mdx, komiku, ani] = await Promise.allSettled([
+      const [mdx, komiku] = await Promise.allSettled([
         getMangaBySearch(query),
         searchKomiku(query),
-        getAnilistMangaBySearch(query),
       ]);
 
       let combined: any[] = [];
 
       if (source === "Semua" || source === "MangaDex") {
-        if (mdx.status === "fulfilled") {
-          combined.push(...mdx.value.map((c: any) => ({ ...c, source: "mangadex" })));
-        }
+        if (mdx.status === "fulfilled") combined.push(...mdx.value.map((c: any) => ({ ...c, source: "mangadex" })));
       }
       if (source === "Semua" || source === "Komiku") {
-        if (komiku.status === "fulfilled") {
-          combined.push(...komiku.value.map((c: any) => ({ ...c, source: "komiku" })));
-        }
-      }
-      if (source === "Semua" || source === "AniList") {
-        if (ani.status === "fulfilled") combined.push(...mapAniList(ani.value));
+        if (komiku.status === "fulfilled") combined.push(...komiku.value.map((c: any) => ({ ...c, source: "komiku" })));
       }
 
       combined = filterCategory(combined, category);
@@ -107,71 +71,34 @@ export async function GET(req: NextRequest) {
       combined = sortData(combined, sort);
 
       const offset = (page - 1) * limit;
-      console.log(`[API/search] ${query} | ${Date.now() - t0}ms`);
       return NextResponse.json(
         { data: combined.slice(offset, offset + limit), total: combined.length },
         { headers: CACHE_HEADERS }
       );
     }
 
-    // ==========================================
-    // SUMBER TUNGGAL
-    // ==========================================
     if (source === "MangaDex") {
       const result = await getMangaByCategory(category, sort, page, limit, genre);
-      console.log(`[API/mangadex] ${category}|${sort}|${genre}|p${page} | ${Date.now() - t0}ms`);
-      return NextResponse.json(
-        { data: result.data, total: result.total },
-        { headers: CACHE_HEADERS }
-      );
+      return NextResponse.json({ data: result.data, total: result.total }, { headers: CACHE_HEADERS });
     }
 
     if (source === "Komiku") {
       const result = await getKomikuPopularManga(page, limit, category, genre);
-      console.log(`[API/komiku] p${page} | ${Date.now() - t0}ms`);
-      return NextResponse.json(
-        { data: sortData(result.data, sort), total: result.total },
-        { headers: CACHE_HEADERS }
-      );
+      return NextResponse.json({ data: sortData(result.data, sort), total: result.total }, { headers: CACHE_HEADERS });
     }
 
-    if (source === "AniList") {
-      const raw = await getAnilistPopularManga(genre);
-      const mapped = mapAniList(raw);
-      const filtered = filterCategory(mapped, category);
-      const sorted = sortData(filtered, sort);
-
-      const offset = (page - 1) * limit;
-      console.log(`[API/anilist] p${page} | ${Date.now() - t0}ms`);
-      return NextResponse.json(
-        { data: sorted.slice(offset, offset + limit), total: sorted.length },
-        { headers: CACHE_HEADERS }
-      );
-    }
-
-    // ==========================================
-    // SEMUA SUMBER (GABUNGAN)
-    // ==========================================
-    // Ambil window tetap, JANGAN page * limit.
-    // Untuk merge + dedupe + sort, cukup ~4x limit.
+    // GABUNGAN SEMUA SUMBER (MangaDex + Komiku)
     const window = Math.min(limit * 4, 120);
 
-    const [mdxS, aniS, komikuS] = await Promise.allSettled([
+    const [mdxS, komikuS] = await Promise.allSettled([
       getMangaByCategory(category, sort, 1, window, genre),
-      getAnilistPopularManga(genre),
       getKomikuPopularManga(1, window, category, genre),
     ]);
 
     const mdxRes = mdxS.status === "fulfilled" ? mdxS.value : { data: [], total: 0 };
-    const aniRes = aniS.status === "fulfilled" ? aniS.value : [];
     const komikuRes = komikuS.status === "fulfilled" ? komikuS.value : { data: [], total: 0 };
 
-    let combined = [
-      ...mdxRes.data,
-      ...mapAniList(aniRes),
-      ...komikuRes.data,
-    ];
-
+    let combined = [...mdxRes.data, ...komikuRes.data];
     combined = filterCategory(combined, category);
     combined = deduplicate(combined);
     combined = sortData(combined, sort);
@@ -179,24 +106,11 @@ export async function GET(req: NextRequest) {
     const offset = (page - 1) * limit;
     const paginated = combined.slice(offset, offset + limit);
 
-    console.log(
-      `[API/all] ${category}|${sort}|${genre}|p${page} | ` +
-      `mdx=${mdxRes.data.length} ani=${aniRes.length} kmk=${komikuRes.data.length} | ` +
-      `${Date.now() - t0}ms`
-    );
-
     return NextResponse.json(
-      {
-        data: paginated,
-        total: combined.length, // <-- GUNAKAN INI
-      },
+      { data: paginated, total: combined.length },
       { headers: CACHE_HEADERS }
     );
   } catch (error) {
-    console.error("[API COMICS ERROR]", (error as Error).message);
-    return NextResponse.json(
-      { data: [], total: 0 },
-      { status: 200, headers: CACHE_HEADERS }
-    );
+    return NextResponse.json({ data: [], total: 0 }, { status: 200, headers: CACHE_HEADERS });
   }
 }

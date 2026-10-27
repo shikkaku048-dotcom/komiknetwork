@@ -1,6 +1,5 @@
 import { MetadataRoute } from 'next'
 import { getPopularManga } from '@/lib/mangadex'
-import { getAnilistPopularManga } from '@/lib/anilist'
 import { getKomikuPopularManga } from '@/lib/komiku'
 
 // Jangan di-prerender saat build
@@ -19,20 +18,22 @@ function withTimeout<T>(promise: Promise<T>, ms = 8000): Promise<T> {
 }
 
 async function getAllComics(): Promise<any[]> {
-  const [mdxRes, aniRes, komikuRes] = await Promise.allSettled([
+  // HANYA AMBIL DARI MANGADEX & KOMIKU
+  const [mdxRes, komikuRes] = await Promise.allSettled([
     withTimeout(getPopularManga()),
-    withTimeout(getAnilistPopularManga()),
     withTimeout(getKomikuPopularManga(1, 100, 'Semua')),
   ])
 
-  const mdxData = mdxRes.status === 'fulfilled' ? mdxRes.value?.data ?? [] : []
-  const aniData = aniRes.status === 'fulfilled' ? aniRes.value ?? [] : []
-  const komikuData =
-    komikuRes.status === 'fulfilled' ? komikuRes.value?.data ?? [] : []
+  // Pastikan fallback selalu array kosong ([]) jika gagal
+  const mdxData = mdxRes.status === 'fulfilled' ? (mdxRes.value?.data ?? []) : []
+  const komikuData = komikuRes.status === 'fulfilled' ? (komikuRes.value?.data ?? []) : []
 
-  const all = [...mdxData, ...aniData, ...komikuData].filter(
+  // Gabungkan dengan aman
+  const all = [...mdxData, ...komikuData].filter(
     (c: any) => c && c.id
   )
+  
+  // Hapus duplikat berdasarkan ID
   return Array.from(new Map(all.map((c: any) => [c.id, c])).values())
 }
 

@@ -6,6 +6,7 @@
   "/api/read/[chapterId]/route": "app/api/read/[chapterId]/route.js",
   "/icon.png/route": "app/icon.png/route.js",
   "/api/comics/route": "app/api/comics/route.js",
+  "/api/nyora-proxy/[...slug]/route": "app/api/nyora-proxy/[...slug]/route.js",
   "/sitemap.xml/route": "app/sitemap.xml/route.js",
   "/comic/[id]/chapter/[chapterId]/page": "app/comic/[id]/chapter/[chapterId]/page.js",
   "/comic/[id]/page": "app/comic/[id]/page.js",
@@ -20,6 +21,5 @@
   "/subscription/page": "app/subscription/page.js",
   "/terms/page": "app/terms/page.js",
   "/update-password/page": "app/update-password/page.js",
-  "/api/nyora-proxy/[...slug]/route": "app/api/nyora-proxy/[...slug]/route.js",
   "/bookmark/page": "app/bookmark/page.js"
 }

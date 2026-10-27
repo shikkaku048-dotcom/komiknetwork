@@ -3,9 +3,7 @@ import Link from "next/link";
 import { Search as SearchIcon } from "lucide-react";
 import { getMangaBySearch } from "@/lib/mangadex";
 import { searchKomiku } from "@/lib/komiku";
-import { getAnilistMangaBySearch } from "@/lib/anilist";
 import ComicGrid from "@/components/ComicGrid";
-// HAPUS: import Header from "@/components/Header";
 
 async function SearchHeader({ searchParamsPromise }: { searchParamsPromise: Promise<{ q?: string }> }) {
   const { q } = await searchParamsPromise;
@@ -39,11 +37,10 @@ async function SearchResults({ searchParamsPromise }: { searchParamsPromise: Pro
     );
   }
 
-  // Panggil semua sumber secara paralel
+  // Panggil sumber yang tersisa secara paralel (MangaDex & Komiku)
   const searchResults = await Promise.allSettled([
     getMangaBySearch(query),
     searchKomiku(query),
-    getAnilistMangaBySearch(query)
   ]);
 
   let combined: any[] = [];
@@ -56,25 +53,7 @@ async function SearchResults({ searchParamsPromise }: { searchParamsPromise: Pro
   const komikuData = (searchResults[1].status === "fulfilled" ? searchResults[1].value : []).map((c: any) => ({ ...c, source: "komiku" }));
   combined.push(...komikuData);
 
- // Cari bagian ini di dalam fungsi SearchResults:
-const aniRaw = searchResults[2].status === "fulfilled" ? searchResults[2].value : [];
-const aniData = aniRaw.map((c: any) => {
-  let type = "Manga";
-  if (c.countryOfOrigin === "KR") type = "Manhwa";
-  else if (c.countryOfOrigin === "CN" || c.countryOfOrigin === "TW") type = "Manhua";
-  
-  return {
-    id: `anilist:${c.id}`,
-    title: c.title,
-    type: type,
-    img: c.coverImage || "https://placehold.co/400x600/png?text=No+Image", // <-- PERBAIKAN: Pastikan property 'img' berisi string URL gambar
-    rating: c.averageScore || 0,
-    readers: "AniList",
-    chapters: c.chapters ? String(c.chapters) : "?",
-    source: "anilist"
-  };
-});
-  combined.push(...aniData);
+  // (BLOK ANILIST SUDAH DIHAPUS TOTAL)
 
   // Hapus duplikat
   const seen = new Set();
@@ -91,7 +70,7 @@ const aniData = aniRaw.map((c: any) => {
           404 // Tidak Ditemukan
         </h2>
         <p className="font-mono text-sm text-gray-600 mb-8 max-w-md mx-auto">
-          Sistem tidak menemukan komik yang cocok dengan kata kunci <strong className="text-gray-900">"{query}"</strong> di semua sumber. Coba gunakan ejaan atau judul alternatif.
+          Sistem tidak menemukan komik yang cocok dengan kata kunci <strong className="text-gray-900">"{query}"</strong> di sumber manapun. Coba gunakan ejaan atau judul alternatif.
         </p>
         <Link
           href="/"
@@ -112,10 +91,7 @@ export default function SearchPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   return (
-    // REVISI: Hapus min-h-screen, gunakan w-full flex-grow
     <div className="w-full flex-grow bg-[#f4f4f4] text-gray-900 font-sans pb-12 selection:bg-amber-500 selection:text-white">
-      {/* HAPUS: <Header /> */}
-      
       <main className="max-w-7xl mx-auto px-4 pt-12">
         <Suspense fallback={
           <div className="mb-10 border-b-2 border-gray-900 pb-6">

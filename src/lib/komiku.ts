@@ -303,31 +303,47 @@ export async function getKomikuChapterPages(url: string): Promise<string[]> {
     const images: string[] = [];
     const possibleSelectors = ['#Baca_Komik img', '.main-reading-area img', '.chapter-img img', '#readerarea img', '.reading-content img'];
     
+    // Di dalam fungsi getKomikuChapterPages...
     for (const selector of possibleSelectors) {
       const foundImages = $(selector);
       if (foundImages.length > 0) {
         foundImages.each((i, el) => {
-          // Ambil URL gambar
+          // Ambil URL dan Alt
           let src = $(el).attr('data-src') || $(el).attr('data-original') || $(el).attr('data-lazy-src') || $(el).attr('src');
-          // Ambil teks alt gambar
           let alt = ($(el).attr('alt') || "").toLowerCase();
+          
+          // Ambil class dari elemen pembungkus (div) gambar
+          const parentClass = ($(el).parent().attr('class') || "").toLowerCase();
+          const parentId = ($(el).parent().attr('id') || "").toLowerCase();
 
           if (src && !src.startsWith('data:')) {
             const fullImg = cleanUrl(src);
             const lowerImg = fullImg.toLowerCase();
 
-            // 1. Daftar kata kunci yang menandakan gambar promosi/iklan
-            const blacklistUrls = ["logo", "banner", "promo", "iklan", "credit", "natsu", "donasi", "komiku.org/wp-content/plugins"];
-            const blacklistAlts = ["komiku", "baca", "iklan", "promo", "credit"];
-
-            // 2. Cek apakah URL mengandung kata kunci blacklist
-            const isUrlBlacklisted = blacklistUrls.some(keyword => lowerImg.includes(keyword));
+            // 1. Daftar kata kunci URL yang DILARANG (diperluas)
+            const blacklistUrls = [
+              "logo", "banner", "promo", "iklan", "credit", "natsu", "donasi",
+              "mgkomik", "mirror", "join", "gacor", "slot", "judi", "ads", 
+              "komikindo", "westmanga", "kiryuu", "shinigami", "sektekomik", "baca"
+            ];
             
-            // 3. Cek apakah Alt text mengandung kata kunci blacklist
-            const isAltBlacklisted = blacklistAlts.some(keyword => alt.includes(keyword));
+            // 2. Daftar kata kunci ALT yang DILARANG
+            const blacklistAlts = [
+              "komiku", "baca", "iklan", "promo", "credit", "mgkomik", "mirror", "join", "banner"
+            ];
 
-            // 4. Jika lolos dari blacklist, masukkan ke array images
-            if (!isUrlBlacklisted && !isAltBlacklisted) {
+            // 3. Daftar class/id parent yang DILARANG (Sangat ampuh untuk iklan)
+            const blacklistParents = ["ads", "banner", "promo", "iklan", "ad-container"];
+
+            // Pengecekan
+            const isUrlBlacklisted = blacklistUrls.some(k => lowerImg.includes(k));
+            const isAltBlacklisted = blacklistAlts.some(k => alt.includes(k));
+            const isParentBlacklisted = blacklistParents.some(k => parentClass.includes(k) || parentId.includes(k));
+
+            // 4. FILTER TAMBAHAN: Buang gambar jika itu gambar pertama (index 0) 
+            // DAN memiliki tinggi/lebar yang tidak wajar (kadang sulit dideteksi via cheerio)
+            // Jadi kita gabungkan semua pengecekan blacklist di atas.
+            if (!isUrlBlacklisted && !isAltBlacklisted && !isParentBlacklisted) {
               images.push(fullImg);
             }
           }
@@ -335,6 +351,7 @@ export async function getKomikuChapterPages(url: string): Promise<string[]> {
         if (images.length > 0) break;
       }
     }
+
     return images;
   } catch (error) {
     return [];

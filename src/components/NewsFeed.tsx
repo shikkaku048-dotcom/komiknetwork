@@ -1,13 +1,11 @@
 import Link from "next/link";
 import { getPopularManga } from "@/lib/mangadex";
-import { getAnilistPopularManga } from "@/lib/anilist";
 import { getKomikuPopularManga } from "@/lib/komiku";
 
 export default async function NewsFeed() {
-  // Ambil data dari 3 sumber
-  const [mdxRes, aniData, komikuRes] = await Promise.all([
+  // HANYA AMBIL DATA DARI MANGADEX & KOMIKU
+  const [mdxRes, komikuRes] = await Promise.all([
     getPopularManga(),
-    getAnilistPopularManga(),
     getKomikuPopularManga(1)
   ]);
 
@@ -15,7 +13,7 @@ export default async function NewsFeed() {
   const komikuData = komikuRes.data || [];
   
   // Gabungkan dan ambil 5 teratas
-  const combined = [...mdxData, ...aniData, ...komikuData];
+  const combined = [...mdxData, ...komikuData];
   const topComics = combined.slice(0, 5);
 
   return (
@@ -32,17 +30,16 @@ export default async function NewsFeed() {
       <div className="flex flex-col gap-6">
         {topComics.length > 0 ? (
           topComics.map((comic: any) => {
-            // Tentukan badge sumber
+            // Tentukan badge sumber (Hanya Komiku yang tersisa)
             let sourceBadge = null;
             if (comic.source === "komiku") {
               sourceBadge = <span className="bg-green-600 text-white px-2 py-0.5 text-[10px] md:text-xs font-bold uppercase tracking-widest">Komiku</span>;
-            } else if (comic.source === "anilist") {
-              sourceBadge = <span className="bg-blue-600 text-white px-2 py-0.5 text-[10px] md:text-xs font-bold uppercase tracking-widest">AniList</span>;
             }
 
             return (
               <Link 
-                href={`/comic/${comic.id}`} 
+                // PERBAIKAN: Tambahkan double encode agar URL Komiku tidak 404
+                href={`/comic/${encodeURIComponent(encodeURIComponent(comic.id))}`} 
                 key={comic.id} 
                 className="flex gap-6 group items-center"
               >

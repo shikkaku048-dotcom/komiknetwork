@@ -42,9 +42,7 @@ export default function ComicGrid({
   const isFirstRender = useRef(true);
 
   const categories = ["Semua", "Manga", "Manhwa", "Manhua"];
-  const sources = ["Semua", "MangaDex", "Komiku", "AniList"];
-  
-  // DAFTAR GENRE
+const sources = ["Semua", "MangaDex", "Komiku"];
   const genres = [
     "Semua", "Action", "Romance", "Isekai", "Murim", 
     "School Life", "Fantasy", "Comedy", "Horror", "Mystery"
