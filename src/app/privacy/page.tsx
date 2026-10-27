@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, Shield } from "lucide-react";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 
 export default function PrivacyPolicy() {
   return (
@@ -93,8 +92,7 @@ export default function PrivacyPolicy() {
           </Link>
         </div>
       </main>
-      
-      <Footer />
+    
     </div>
   );
 }

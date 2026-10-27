@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, Scale } from "lucide-react";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 
 export default function TermsOfService() {
   return (
@@ -83,7 +82,6 @@ export default function TermsOfService() {
         </div>
       </main>
       
-      <Footer />
     </div>
   );
 }

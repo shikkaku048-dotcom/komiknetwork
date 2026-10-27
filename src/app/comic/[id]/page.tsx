@@ -12,7 +12,10 @@ import { getKomikuMangaDetail } from "@/lib/komiku";
 import ChapterList from "@/components/ChapterList";
 import BookmarkButton from "@/components/BookmarkButton";
 import { getImageUrl } from "@/lib/imageHelper";
-import SafeImage from "@/components/SafeImage"; // <-- IMPORT SAFEIMAGE
+import SafeImage from "@/components/SafeImage";
+// TAMBAHKAN IMPORT INI
+import BackButton from "@/components/BackButton";
+import ShareButton from "@/components/ShareButton";
 
 type ChapterItem = {
   id: string;
@@ -37,7 +40,7 @@ function countLanguages(chapters: ChapterItem[]) {
 }
 
 // Info Komik MangaDex
-function ComicInfo({ manga }: { manga: any }) {
+function ComicInfo({ manga, id }: { manga: any, id: string }) {
   const title = pickTitle(manga);
   const descObj = manga.attributes.description || {};
   const description = descObj.en || descObj.id || Object.values(descObj)[0] || "Belum ada deskripsi.";
@@ -51,6 +54,8 @@ function ComicInfo({ manga }: { manga: any }) {
 
   return (
     <div className="relative w-full border-b border-gray-300 pb-12 mb-8">
+      <BackButton /> {/* TAMBAHKAN TOMBOL KEMBALI DI SINI */}
+      
       <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 text-gray-300"><Plus className="w-6 h-6" /></div>
       <div className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 text-gray-300"><Plus className="w-6 h-6" /></div>
 
@@ -76,13 +81,15 @@ function ComicInfo({ manga }: { manga: any }) {
                 Baca Komik <ArrowRight className="w-4 h-4" />
               </a>
               <BookmarkButton comic={{ id: manga.id, title, img: coverUrl, type: manga.attributes.originalLanguage === "ko" ? "Manhwa" : "Manga", chapters: manga.attributes.lastChapter || "?", readers: "0" }} />
+              
+              {/* TAMBAHKAN TOMBOL SHARE DI SINI */}
+              <ShareButton title={title} url={`https://komiknet.site/comic/${id}`} />
             </div>
           </div>
         </div>
         <div className="lg:col-span-5 relative group self-start">
           <div className="absolute inset-0 border border-gray-400 translate-x-3 translate-y-3 pointer-events-none"></div>
           <div className="overflow-hidden border border-gray-900 relative z-10 bg-gray-100">
-            {/* REVISI: Gunakan SafeImage */}
             <SafeImage 
               src={getImageUrl(coverUrl)} 
               originalSrc={coverUrl}
@@ -97,9 +104,11 @@ function ComicInfo({ manga }: { manga: any }) {
 }
 
 // Info Komik Komiku
-function KomikuComicInfo({ manga }: { manga: any }) {
+function KomikuComicInfo({ manga, id }: { manga: any, id: string }) {
   return (
     <div className="relative w-full border-b border-gray-300 pb-12 mb-8">
+      <BackButton /> {/* TAMBAHKAN TOMBOL KEMBALI DI SINI */}
+
       <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 text-gray-300"><Plus className="w-6 h-6" /></div>
       <div className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 text-gray-300"><Plus className="w-6 h-6" /></div>
 
@@ -122,13 +131,15 @@ function KomikuComicInfo({ manga }: { manga: any }) {
                 Baca Komik <ArrowRight className="w-4 h-4" />
               </a>
               <BookmarkButton comic={{ id: `komiku:${encodeURIComponent(manga.url)}`, title: manga.title, img: manga.img, type: "Manga", chapters: "?", readers: "0" }} />
+              
+              {/* TAMBAHKAN TOMBOL SHARE DI SINI */}
+              <ShareButton title={manga.title} url={`https://komiknet.site/comic/${id}`} />
             </div>
           </div>
         </div>
         <div className="lg:col-span-5 relative group self-start">
           <div className="absolute inset-0 border border-gray-400 translate-x-3 translate-y-3 pointer-events-none"></div>
           <div className="overflow-hidden border border-gray-900 relative z-10 bg-gray-100">
-            {/* REVISI: Gunakan SafeImage */}
             <SafeImage 
               src={getImageUrl(manga.img)} 
               originalSrc={manga.img}
@@ -202,7 +213,7 @@ async function ComicDetailsWrapper({ params }: { params: Promise<{ id: string }>
     return (
       <>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-        <KomikuComicInfo manga={manga} />
+        <KomikuComicInfo manga={manga} id={id} /> {/* PASSING ID UNTUK SHARE */}
         <div id="chapter-list" className="mt-12">
           <div className="flex items-end justify-between border-b-2 border-gray-900 pb-4 mb-6">
             <h2 className="text-3xl font-black uppercase tracking-tighter">Indeks Chapter</h2>
@@ -229,7 +240,7 @@ async function ComicDetailsWrapper({ params }: { params: Promise<{ id: string }>
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <ComicInfo manga={manga} />
+      <ComicInfo manga={manga} id={id} /> {/* PASSING ID UNTUK SHARE */}
       <Suspense fallback={<LoadingState />}><ComicChapters id={id} /></Suspense>
     </>
   );

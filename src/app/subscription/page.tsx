@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation"; // <-- 1. TAMBAHKAN IMPORT INI
 import { supabase } from "@/lib/supabase";
 import { 
   ArrowLeft, Check, Crown, Sparkles, ShieldCheck, 
@@ -9,6 +10,7 @@ import {
 } from "lucide-react";
 
 export default function SubscriptionPage() {
+  const router = useRouter(); // <-- 2. INISIALISASI ROUTER
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -17,8 +19,10 @@ export default function SubscriptionPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
+      // 3. REVISI: JIKA BELUM LOGIN, LANGSUNG REDIRECT KE HALAMAN LOGIN
       if (!session) {
-        alert("Silakan login terlebih dahulu untuk berlangganan!");
+        // (Opsional) Tambahkan ?redirect=/subscription agar setelah login user kembali ke sini
+        router.push("/login?redirect=/subscription"); 
         return;
       }
 
