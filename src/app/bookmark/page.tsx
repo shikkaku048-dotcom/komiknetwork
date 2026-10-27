@@ -6,8 +6,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { BookmarkX, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-// HAPUS: import Header from "@/components/Header";
-// HAPUS: import Footer from "@/components/Footer";
+import { getImageUrl } from "@/lib/imageHelper"; // <-- TAMBAHAN IMPORT
 
 type BookmarkedComic = {
   id: string;
@@ -23,17 +22,67 @@ export default function BookmarkPage() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // ... (logika useEffect kamu tetap sama)
+    const fetchBookmarks = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          const { data, error } = await supabase
+            .from("bookmarks")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+          if (!error && data) {
+            const formattedData = data.map((b: any) => ({
+              id: b.comic_id,
+              title: b.title,
+              img: b.img,
+              type: b.type,
+              chapters: b.chapters,
+              readers: "0"
+            }));
+            setBookmarks(formattedData);
+          }
+        } else {
+          const saved = localStorage.getItem("komik_bookmarks");
+          if (saved) {
+            setBookmarks(JSON.parse(saved));
+          }
+        }
+      } catch (e) {
+        console.error("Gagal membaca bookmark", e);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+
+    fetchBookmarks();
   }, []);
 
   const removeBookmark = async (id: string) => {
-    // ... (logika removeBookmark kamu tetap sama)
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        await supabase
+          .from("bookmarks")
+          .delete()
+          .eq("user_id", session.user.id)
+          .eq("comic_id", id);
+      } else {
+        const updated = bookmarks.filter((b) => b.id !== id);
+        localStorage.setItem("komik_bookmarks", JSON.stringify(updated));
+      }
+
+      setBookmarks((prev) => prev.filter((b) => b.id !== id));
+      
+    } catch (error) {
+      console.error("Gagal menghapus bookmark", error);
+    }
   };
 
   return (
-    // HAPUS class min-h-screen flex flex-col karena sudah dihandle layout
     <div className="w-full flex-grow">
-      
       <main className="w-full max-w-7xl mx-auto px-4 py-12">
         
         <div className="mb-10 border-b-2 border-gray-900 pb-6">
@@ -66,10 +115,10 @@ export default function BookmarkPage() {
             {bookmarks.map((comic) => (
               <div key={comic.id} className="group relative">
                 
-                <Link href={`/comic/${comic.id}`} className="block bg-white border-2 border-gray-900 flex flex-col h-full transition-all duration-300 group-hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] group-hover:-translate-y-1 group-hover:-translate-x-1">
+                <Link href={`/comic/${encodeURIComponent(encodeURIComponent(comic.id))}`} className="block bg-white border-2 border-gray-900 flex flex-col h-full transition-all duration-300 group-hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] group-hover:-translate-y-1 group-hover:-translate-x-1">
                   <div className="relative aspect-[3/4] overflow-hidden border-b-2 border-gray-900 bg-gray-100">
                     <img 
-                      src={`/api/image?url=${encodeURIComponent(comic.img)}`} 
+                      src={getImageUrl(comic.img)} // <-- REVISI
                       alt={comic.title} 
                       className="w-full h-full object-cover transition duration-500 group-hover:scale-105" 
                     />
@@ -102,8 +151,6 @@ export default function BookmarkPage() {
           </div>
         )}
       </main>
-      
-      {/* HAPUS: <Footer /> */}
     </div>
   );
 }

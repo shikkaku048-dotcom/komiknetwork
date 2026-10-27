@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, SlidersHorizontal, Loader2, Database, Tags } from "lucide-react";
+import { getImageUrl } from "@/lib/imageHelper";
 
 type ComicItem = {
   id: string;
@@ -29,7 +30,7 @@ export default function ComicGrid({
   const [activeCategory, setActiveCategory] = useState("Semua");
   const [activeSort, setActiveSort] = useState("Populer");
   const [activeSource, setActiveSource] = useState("Semua");
-  const [activeGenre, setActiveGenre] = useState("Semua"); // <-- STATE GENRE BARU
+  const [activeGenre, setActiveGenre] = useState("Semua");
   const [currentPage, setCurrentPage] = useState(1);
   
   const [comics, setComics] = useState<ComicItem[]>(initialComics.slice(0, ITEMS_PER_PAGE));
@@ -37,12 +38,10 @@ export default function ComicGrid({
   const [isLoading, setIsLoading] = useState(false);
 
   const topGridRef = useRef<HTMLDivElement>(null);
-  
-  // Ref untuk mencegah double fetch saat pertama kali render
   const isFirstRender = useRef(true);
 
   const categories = ["Semua", "Manga", "Manhwa", "Manhua"];
-const sources = ["Semua", "MangaDex", "Komiku"];
+  const sources = ["Semua", "MangaDex", "Komiku"];
   const genres = [
     "Semua", "Action", "Romance", "Isekai", "Murim", 
     "School Life", "Fantasy", "Comedy", "Horror", "Mystery"
@@ -68,7 +67,6 @@ const sources = ["Semua", "MangaDex", "Komiku"];
   const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
 
   useEffect(() => {
-    // Jika ini render pertama, lewati fetch (Gunakan data dari Server Component)
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
@@ -77,7 +75,6 @@ const sources = ["Semua", "MangaDex", "Komiku"];
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // Tambahkan parameter &genre= ke dalam URL API
         let url = `/api/comics?page=${currentPage}&limit=${ITEMS_PER_PAGE}&category=${activeCategory}&sort=${activeSort}&source=${activeSource}&genre=${activeGenre}&t=${Date.now()}`;
         if (initialQuery) {
           url += `&q=${encodeURIComponent(initialQuery)}`;
@@ -101,7 +98,7 @@ const sources = ["Semua", "MangaDex", "Komiku"];
     };
 
     fetchData();
-  }, [currentPage, activeCategory, activeSort, activeSource, activeGenre, initialQuery]); // Tambahkan activeGenre
+  }, [currentPage, activeCategory, activeSort, activeSource, activeGenre, initialQuery]);
 
   const handleFilterChange = (type: "category" | "sort" | "source" | "genre", value: string) => {
     if (type === "category") setActiveCategory(value);
@@ -145,8 +142,6 @@ const sources = ["Semua", "MangaDex", "Komiku"];
 
         {/* Filter Desktop (Kanan) */}
         <div className="hidden md:flex items-center gap-2 shrink-0">
-          
-          {/* Source Dropdown */}
           <Database className="w-4 h-4 text-gray-500" />
           <select
             value={activeSource}
@@ -159,7 +154,6 @@ const sources = ["Semua", "MangaDex", "Komiku"];
             ))}
           </select>
 
-          {/* Genre Dropdown */}
           <Tags className="w-4 h-4 text-gray-500 ml-2" />
           <select
             value={activeGenre}
@@ -172,7 +166,6 @@ const sources = ["Semua", "MangaDex", "Komiku"];
             ))}
           </select>
 
-          {/* Sort Dropdown */}
           <SlidersHorizontal className="w-4 h-4 text-gray-500 ml-2" />
           <select
             value={activeSort}
@@ -188,7 +181,6 @@ const sources = ["Semua", "MangaDex", "Komiku"];
 
         {/* Filter Mobile (Kanan) */}
         <div className="flex md:hidden items-center gap-2 shrink-0">
-          {/* Mobile Source */}
           <div className="relative">
             <select
               value={activeSource}
@@ -205,7 +197,6 @@ const sources = ["Semua", "MangaDex", "Komiku"];
             </div>
           </div>
 
-          {/* Mobile Genre */}
           <div className="relative">
             <select
               value={activeGenre}
@@ -222,7 +213,6 @@ const sources = ["Semua", "MangaDex", "Komiku"];
             </div>
           </div>
 
-          {/* Mobile Sort */}
           <div className="relative">
             <select
               value={activeSort}
@@ -268,8 +258,12 @@ const sources = ["Semua", "MangaDex", "Komiku"];
                   <div className="bg-white border-2 border-gray-900 flex flex-col h-full transition-all duration-300 group-hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] group-hover:-translate-y-1 group-hover:-translate-x-1">
                     <div className="relative aspect-[3/4] overflow-hidden border-b-2 border-gray-900 bg-gray-100">
                       <img
-                        src={`/api/image?url=${encodeURIComponent(comic.img)}`}
+                        src={getImageUrl(comic.img)}
                         alt={comic.title}
+                        // TAMBAHAN ONERROR UNTUK FALLBACK
+                        onError={(e) => {
+                          e.currentTarget.src = `/api/image?url=${encodeURIComponent(comic.img)}`;
+                        }}
                         className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
                       />
                       <div className="absolute top-0 right-0 bg-gray-900 text-white font-mono text-[10px] font-bold px-2 py-1 uppercase tracking-widest">

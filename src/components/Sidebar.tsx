@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Star } from "lucide-react";
 import { getRecentChapters, getTopRatedManga } from "@/lib/mangadex";
+import { getImageUrl } from "@/lib/imageHelper"; // <-- TAMBAHAN IMPORT
 
 function SidebarSkeleton() {
   return (
@@ -16,21 +17,17 @@ function SidebarSkeleton() {
 async function SidebarContent() {
   await connection();
 
-  // HANYA AMBIL DARI MANGADEX
   const [recentChapters, mdxTopRated] = await Promise.all([
     getRecentChapters(6),
     getTopRatedManga(6), 
   ]);
 
-  // Ambil 6 teratas (jika getTopRatedManga belum membatasi)
   const combinedTopRated = mdxTopRated.slice(0, 6); 
 
   return (
     <div className="space-y-12">
       
-      {/* ========================================= */}
-      {/* 1. CHAPTER TERBARU (MangaDex)             */}
-      {/* ========================================= */}
+      {/* 1. CHAPTER TERBARU */}
       <div>
         <div className="flex justify-between items-end border-b-2 border-gray-900 pb-3 mb-6">
           <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter text-gray-900">
@@ -53,7 +50,7 @@ async function SidebarContent() {
             >
               <div className="w-24 h-36 md:w-32 md:h-48 flex-shrink-0 bg-white border-2 border-gray-900 shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-all duration-300 group-hover:shadow-none group-hover:translate-x-[4px] group-hover:translate-y-[4px] overflow-hidden">
                 <img 
-                  src={`/api/image?url=${encodeURIComponent(ch.img)}`} 
+                  src={getImageUrl(ch.img)} // <-- REVISI
                   alt={ch.title} 
                   className="w-full h-full object-cover group-hover:scale-105 transition duration-500" 
                 />
@@ -77,9 +74,7 @@ async function SidebarContent() {
         </div>
       </div>
 
-      {/* ========================================= */}
-      {/* 2. RATING TERTINGGI (MangaDex)            */}
-      {/* ========================================= */}
+      {/* 2. RATING TERTINGGI */}
       {combinedTopRated.length > 0 && (
         <div>
           <div className="flex justify-between items-end border-b-2 border-gray-900 pb-3 mb-6">
@@ -92,14 +87,13 @@ async function SidebarContent() {
             {combinedTopRated.map((manga, idx) => (
               <Link 
                 key={manga.id} 
-                // Gunakan double encode untuk berjaga-jaga
                 href={`/comic/${encodeURIComponent(encodeURIComponent(manga.id))}`} 
                 className="flex gap-6 group items-center"
               >
                 
                 <div className="relative w-24 h-36 md:w-32 md:h-48 flex-shrink-0 bg-white border-2 border-gray-900 shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-all duration-300 group-hover:shadow-none group-hover:translate-x-[4px] group-hover:translate-y-[4px] overflow-hidden">
                   <img 
-                    src={`/api/image?url=${encodeURIComponent(manga.img)}`} 
+                    src={getImageUrl(manga.img)} // <-- REVISI
                     alt={manga.title} 
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-500" 
                   />

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { getPopularManga } from "@/lib/mangadex";
 import { getKomikuPopularManga } from "@/lib/komiku";
+import { getImageUrl } from "@/lib/imageHelper"; // <-- TAMBAHAN IMPORT
 
 export default async function NewsFeed() {
-  // HANYA AMBIL DATA DARI MANGADEX & KOMIKU
   const [mdxRes, komikuRes] = await Promise.all([
     getPopularManga(),
     getKomikuPopularManga(1)
@@ -12,7 +12,6 @@ export default async function NewsFeed() {
   const mdxData = mdxRes.data || [];
   const komikuData = komikuRes.data || [];
   
-  // Gabungkan dan ambil 5 teratas
   const combined = [...mdxData, ...komikuData];
   const topComics = combined.slice(0, 5);
 
@@ -30,7 +29,6 @@ export default async function NewsFeed() {
       <div className="flex flex-col gap-6">
         {topComics.length > 0 ? (
           topComics.map((comic: any) => {
-            // Tentukan badge sumber (Hanya Komiku yang tersisa)
             let sourceBadge = null;
             if (comic.source === "komiku") {
               sourceBadge = <span className="bg-green-600 text-white px-2 py-0.5 text-[10px] md:text-xs font-bold uppercase tracking-widest">Komiku</span>;
@@ -38,21 +36,18 @@ export default async function NewsFeed() {
 
             return (
               <Link 
-                // PERBAIKAN: Tambahkan double encode agar URL Komiku tidak 404
                 href={`/comic/${encodeURIComponent(encodeURIComponent(comic.id))}`} 
                 key={comic.id} 
                 className="flex gap-6 group items-center"
               >
-                {/* SAMPUL BESAR (Sama dengan Sidebar) */}
                 <div className="w-24 h-36 md:w-32 md:h-48 flex-shrink-0 bg-white border-2 border-gray-900 shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-all duration-300 group-hover:shadow-none group-hover:translate-x-[4px] group-hover:translate-y-[4px] overflow-hidden">
                   <img 
-                    src={`/api/image?url=${encodeURIComponent(comic.img)}`} 
+                    src={getImageUrl(comic.img)} // <-- REVISI
                     alt={comic.title} 
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-500" 
                   />
                 </div>
 
-                {/* Teks Kanan (Diperbesar) */}
                 <div className="flex flex-col justify-center flex-1 min-w-0">
                   <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3 flex-wrap">
                     {sourceBadge}
@@ -61,7 +56,6 @@ export default async function NewsFeed() {
                     </h3>
                   </div>
                   
-                  {/* Info Chapter & Rating */}
                   <div className="flex flex-wrap items-center gap-2 md:gap-3 font-mono text-xs md:text-sm uppercase tracking-widest text-gray-500">
                     <span className="bg-white border-2 border-gray-300 px-2 py-0.5">
                       {comic.chapters && comic.chapters !== "?" ? comic.chapters : "-"} Ch.

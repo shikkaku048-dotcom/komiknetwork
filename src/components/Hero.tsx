@@ -4,6 +4,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Bookmark, Share2, ArrowRight, Check } from "lucide-react";
+import { getImageUrl } from "@/lib/imageHelper"; // <-- TAMBAHKAN IMPORT INI
 
 export type HeroManga = {
   id: string;
@@ -27,12 +28,10 @@ export default function Hero({ mangas }: { mangas?: HeroManga[] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [savedIds, setSavedIds] = useState<string[]>([]);
   
-  // Gunakan useMemo agar array tidak dibuat ulang setiap render
   const displayList = useMemo(() => {
     return mangas && mangas.length > 0 ? mangas.slice(0, 10) : [FALLBACK_HERO];
   }, [mangas]);
 
-  // Ambil data bookmark dari localStorage saat komponen dimuat
   useEffect(() => {
     const saved = localStorage.getItem("komik_bookmarks");
     if (saved) {
@@ -43,7 +42,6 @@ export default function Hero({ mangas }: { mangas?: HeroManga[] }) {
     }
   }, []);
 
-  // Timer untuk Slider Otomatis
   useEffect(() => {
     if (displayList.length <= 1) return;
     const timer = setInterval(() => {
@@ -52,7 +50,6 @@ export default function Hero({ mangas }: { mangas?: HeroManga[] }) {
     return () => clearInterval(timer);
   }, [displayList.length]);
 
-  // Fungsi Toggle Bookmark
   const toggleBookmark = (manga: HeroManga) => {
     let bookmarks = [];
     const saved = localStorage.getItem("komik_bookmarks");
@@ -80,7 +77,6 @@ export default function Hero({ mangas }: { mangas?: HeroManga[] }) {
     localStorage.setItem("komik_bookmarks", JSON.stringify(bookmarks));
   };
 
-  // Fungsi Share
   const handleShare = async (manga: HeroManga, href: string) => {
     const shareUrl = window.location.origin + href;
     const shareData = {
@@ -103,15 +99,13 @@ export default function Hero({ mangas }: { mangas?: HeroManga[] }) {
 
   return (
     <section className="relative bg-[#111] text-white overflow-hidden h-[500px] md:h-[600px] border-b border-gray-300">
-      
-      {/* REVISI: Durasi transisi dipercepat (500ms) dan menggunakan ease-out agar tidak kaku */}
       <div
         className="flex h-full transition-transform duration-500 ease-out"
         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
       >
         {displayList.map((manga, index) => {
           const isExternalUrl = manga.id.startsWith("http");
-          const href = isExternalUrl ? `/search?q=${encodeURIComponent(manga.title)}` : `/comic/${manga.id}`;
+          const href = isExternalUrl ? `/search?q=${encodeURIComponent(manga.title)}` : `/comic/${encodeURIComponent(manga.id)}`; // <-- Tambahan encodeURIComponent untuk keamanan link
           const isSaved = savedIds.includes(manga.id);
           const isFirstSlide = index === 0;
 
@@ -119,16 +113,13 @@ export default function Hero({ mangas }: { mangas?: HeroManga[] }) {
             <div key={manga.id} className="w-full h-full flex-shrink-0 relative">
               <div className="absolute inset-0">
                 <img
-                  src={`/api/image?url=${encodeURIComponent(manga.img)}`}
+                  src={getImageUrl(manga.img)} // <-- SUDAH BENAR
                   alt={manga.title}
-                  // REVISI OPTIMASI GAMBAR:
                   loading={isFirstSlide ? "eager" : "lazy"}
                   fetchPriority={isFirstSlide ? "high" : "auto"}
                   decoding={isFirstSlide ? "sync" : "async"}
-                  // Tambahkan bg-[#111] agar saat gambar belum muncul, layar tidak berkedip putih
                   className="w-full h-full object-cover object-top opacity-40 bg-[#111]"
                 />
-                {/* Gradient overlay dipertegas untuk menutupi gambar yang mungkin telat loading */}
                 <div className="absolute inset-0 bg-gradient-to-r from-[#111] via-[#111]/95 to-transparent" />
               </div>
 
@@ -167,7 +158,6 @@ export default function Hero({ mangas }: { mangas?: HeroManga[] }) {
                         Baca Sekarang <ArrowRight className="w-4 h-4" />
                       </Link>
                       
-                      {/* TOMBOL BOOKMARK */}
                       <button 
                         onClick={() => toggleBookmark(manga)}
                         className={`flex items-center gap-2 border font-mono text-xs uppercase tracking-widest px-6 py-3 transition-colors duration-200 active:scale-95 ${
@@ -183,7 +173,6 @@ export default function Hero({ mangas }: { mangas?: HeroManga[] }) {
                         )}
                       </button>
                       
-                      {/* TOMBOL SHARE */}
                       <button 
                         onClick={() => handleShare(manga, href)}
                         className="flex items-center gap-2 border border-gray-500 hover:border-white text-gray-300 hover:text-white font-mono text-xs uppercase tracking-widest px-6 py-3 transition-colors duration-200 active:scale-95"
@@ -199,14 +188,12 @@ export default function Hero({ mangas }: { mangas?: HeroManga[] }) {
         })}
       </div>
 
-      {/* Indikator Kotak */}
       {displayList.length > 1 && (
         <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-20">
           {displayList.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setCurrentIndex(idx)}
-              // REVISI: Gunakan transition-colors agar browser tidak menghitung layout ulang
               className={`h-2 rounded-none transition-colors duration-300 ${
                 idx === currentIndex ? "w-8 bg-amber-500" : "w-2 bg-gray-500 hover:bg-gray-300"
               }`}

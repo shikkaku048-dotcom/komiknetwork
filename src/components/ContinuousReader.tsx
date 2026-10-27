@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import { getImageUrl } from "@/lib/imageHelper"; // <-- TAMBAHAN IMPORT
 
 // ==========================================
 // Komponen Khusus Gambar (Anti Kotak Kosong)
@@ -104,7 +105,7 @@ export default function ContinuousReader({ initialData, mangaId }: { initialData
 
               {/* Panggil komponen PageImage di sini */}
               <PageImage 
-                src={`/api/image?url=${encodeURIComponent(img)}`} 
+                src={getImageUrl(img)} // <-- REVISI: Menggunakan getImageUrl
                 alt={`Halaman ${i + 1}`} 
               />
             </div>

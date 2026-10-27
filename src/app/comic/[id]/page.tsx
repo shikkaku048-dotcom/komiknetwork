@@ -11,6 +11,7 @@ import type { Metadata } from "next";
 import { getKomikuMangaDetail } from "@/lib/komiku";
 import ChapterList from "@/components/ChapterList";
 import BookmarkButton from "@/components/BookmarkButton";
+import { getImageUrl } from "@/lib/imageHelper"; // <-- TAMBAHAN IMPORT
 
 type ChapterItem = {
   id: string;
@@ -80,7 +81,11 @@ function ComicInfo({ manga }: { manga: any }) {
         <div className="lg:col-span-5 relative group self-start">
           <div className="absolute inset-0 border border-gray-400 translate-x-3 translate-y-3 pointer-events-none"></div>
           <div className="overflow-hidden border border-gray-900 relative z-10 bg-gray-100">
-            <img src={`/api/image?url=${encodeURIComponent(coverUrl)}`} alt={`Cover komik ${title}`} className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-105" />
+            <img 
+              src={getImageUrl(coverUrl)} // <-- REVISI
+              alt={`Cover komik ${title}`} 
+              className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-105" 
+            />
           </div>
         </div>
       </div>
@@ -120,7 +125,11 @@ function KomikuComicInfo({ manga }: { manga: any }) {
         <div className="lg:col-span-5 relative group self-start">
           <div className="absolute inset-0 border border-gray-400 translate-x-3 translate-y-3 pointer-events-none"></div>
           <div className="overflow-hidden border border-gray-900 relative z-10 bg-gray-100">
-            <img src={`/api/image?url=${encodeURIComponent(manga.img)}`} alt={`Cover komik ${manga.title}`} className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-105" />
+            <img 
+              src={getImageUrl(manga.img)} // <-- REVISI
+              alt={`Cover komik ${manga.title}`} 
+              className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-105" 
+            />
           </div>
         </div>
       </div>
