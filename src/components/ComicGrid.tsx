@@ -122,7 +122,6 @@ export default function ComicGrid({
       {/* HEADER: KATEGORI, SUMBER, GENRE, & SORTIR */}
       <div className="flex flex-row items-center justify-between gap-2 mb-8 border-b-2 border-gray-900 pb-4">
         
-        {/* Kategori (Kiri) */}
         <div className="flex flex-row items-center gap-1 md:gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
           {categories.map((category) => (
             <button
@@ -140,7 +139,6 @@ export default function ComicGrid({
           ))}
         </div>
 
-        {/* Filter Desktop (Kanan) */}
         <div className="hidden md:flex items-center gap-2 shrink-0">
           <Database className="w-4 h-4 text-gray-500" />
           <select
@@ -179,7 +177,6 @@ export default function ComicGrid({
           </select>
         </div>
 
-        {/* Filter Mobile (Kanan) */}
         <div className="flex md:hidden items-center gap-2 shrink-0">
           <div className="relative">
             <select
@@ -260,9 +257,11 @@ export default function ComicGrid({
                       <img
                         src={getImageUrl(comic.img)}
                         alt={comic.title}
-                        // TAMBAHAN ONERROR UNTUK FALLBACK
+                        // PENGAMAN ONERROR: Cek dulu apakah src sekarang sudah API, jika belum baru ganti
                         onError={(e) => {
-                          e.currentTarget.src = `/api/image?url=${encodeURIComponent(comic.img)}`;
+                          if (!e.currentTarget.src.includes('/api/image')) {
+                            e.currentTarget.src = `/api/image?url=${encodeURIComponent(comic.img)}`;
+                          }
                         }}
                         className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
                       />

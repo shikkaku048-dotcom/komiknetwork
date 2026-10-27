@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { getPopularManga } from "@/lib/mangadex";
 import { getKomikuPopularManga } from "@/lib/komiku";
-import { getImageUrl } from "@/lib/imageHelper"; // <-- TAMBAHAN IMPORT
+import { getImageUrl } from "@/lib/imageHelper";
+import SafeImage from "@/components/SafeImage"; // <-- TAMBAHAN IMPORT
 
 export default async function NewsFeed() {
   const [mdxRes, komikuRes] = await Promise.all([
@@ -41,8 +42,9 @@ export default async function NewsFeed() {
                 className="flex gap-6 group items-center"
               >
                 <div className="w-24 h-36 md:w-32 md:h-48 flex-shrink-0 bg-white border-2 border-gray-900 shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-all duration-300 group-hover:shadow-none group-hover:translate-x-[4px] group-hover:translate-y-[4px] overflow-hidden">
-                  <img 
-                    src={getImageUrl(comic.img)} // <-- REVISI
+                  <SafeImage 
+                    src={getImageUrl(comic.img)} 
+                    originalSrc={comic.img} // <-- TAMBAHAN UNTUK FALLBACK
                     alt={comic.title} 
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-500" 
                   />

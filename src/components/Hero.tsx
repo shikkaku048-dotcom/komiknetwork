@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Bookmark, Share2, ArrowRight, Check } from "lucide-react";
-import { getImageUrl } from "@/lib/imageHelper"; // <-- TAMBAHKAN IMPORT INI
+import { getImageUrl } from "@/lib/imageHelper";
 
 export type HeroManga = {
   id: string;
@@ -105,7 +105,7 @@ export default function Hero({ mangas }: { mangas?: HeroManga[] }) {
       >
         {displayList.map((manga, index) => {
           const isExternalUrl = manga.id.startsWith("http");
-          const href = isExternalUrl ? `/search?q=${encodeURIComponent(manga.title)}` : `/comic/${encodeURIComponent(manga.id)}`; // <-- Tambahan encodeURIComponent untuk keamanan link
+          const href = isExternalUrl ? `/search?q=${encodeURIComponent(manga.title)}` : `/comic/${encodeURIComponent(manga.id)}`;
           const isSaved = savedIds.includes(manga.id);
           const isFirstSlide = index === 0;
 
@@ -113,8 +113,14 @@ export default function Hero({ mangas }: { mangas?: HeroManga[] }) {
             <div key={manga.id} className="w-full h-full flex-shrink-0 relative">
               <div className="absolute inset-0">
                 <img
-                  src={getImageUrl(manga.img)} // <-- SUDAH BENAR
+                  src={getImageUrl(manga.img)}
                   alt={manga.title}
+                  // ONERROR FALLBACK
+                  onError={(e) => {
+                    if (!e.currentTarget.src.includes('/api/image')) {
+                      e.currentTarget.src = `/api/image?url=${encodeURIComponent(manga.img)}`;
+                    }
+                  }}
                   loading={isFirstSlide ? "eager" : "lazy"}
                   fetchPriority={isFirstSlide ? "high" : "auto"}
                   decoding={isFirstSlide ? "sync" : "async"}
