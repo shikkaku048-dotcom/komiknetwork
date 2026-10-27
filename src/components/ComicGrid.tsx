@@ -80,7 +80,8 @@ export default function ComicGrid({
           url += `&q=${encodeURIComponent(initialQuery)}`;
         }
 
-        const res = await fetch(url, { cache: "no-store" });
+        // REVISI 1: Ubah no-store menjadi revalidate agar di-cache oleh Vercel
+        const res = await fetch(url, { next: { revalidate: 60 } });
         
         if (!res.ok) throw new Error("Gagal");
         
@@ -119,9 +120,7 @@ export default function ComicGrid({
 
   return (
     <div className="w-full relative" ref={topGridRef}>
-      {/* HEADER: KATEGORI, SUMBER, GENRE, & SORTIR */}
       <div className="flex flex-row items-center justify-between gap-2 mb-8 border-b-2 border-gray-900 pb-4">
-        
         <div className="flex flex-row items-center gap-1 md:gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
           {categories.map((category) => (
             <button
@@ -177,6 +176,7 @@ export default function ComicGrid({
           </select>
         </div>
 
+        {/* Mobile filters... (sama seperti sebelumnya) */}
         <div className="flex md:hidden items-center gap-2 shrink-0">
           <div className="relative">
             <select
@@ -228,7 +228,6 @@ export default function ComicGrid({
         </div>
       </div>
 
-      {/* GRID KOMIK */}
       <div className="relative min-h-[500px]">
         {isLoading && (
           <div className="absolute inset-0 z-10 bg-[#f4f4f4]/80 flex flex-col items-center justify-center border-2 border-dashed border-gray-300">
@@ -254,17 +253,27 @@ export default function ComicGrid({
                <Link href={`/comic/${encodeURIComponent(comic.id)}`} key={comic.id} className="group">
                   <div className="bg-white border-2 border-gray-900 flex flex-col h-full transition-all duration-300 group-hover:shadow-[6px_6px_0px_rgba(0,0,0,1)] group-hover:-translate-y-1 group-hover:-translate-x-1">
                     <div className="relative aspect-[3/4] overflow-hidden border-b-2 border-gray-900 bg-gray-100">
-                      <img
-                        src={getImageUrl(comic.img)}
-                        alt={comic.title}
-                        // PENGAMAN ONERROR: Cek dulu apakah src sekarang sudah API, jika belum baru ganti
-                        onError={(e) => {
-                          if (!e.currentTarget.src.includes('/api/image')) {
-                            e.currentTarget.src = `/api/image?url=${encodeURIComponent(comic.img)}`;
-                          }
-                        }}
-                        className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
-                      />
+<img
+  src={getImageUrl(comic.img)}
+  alt={comic.title}
+  referrerPolicy="no-referrer"
+  onError={(e) => {
+    const target = e.currentTarget;
+    // 1. Jika Direct Link gagal, coba lewat wsrv.nl
+    if (!target.src.includes('wsrv.nl') && !target.src.includes('placehold.co')) {
+      target.src = `https://wsrv.nl/?url=${encodeURIComponent(comic.img)}&w=400`;
+    } 
+    // 2. Jika wsrv.nl juga gagal, coba lewat Vercel
+    else if (!target.src.includes('/api/image') && !target.src.includes('placehold.co')) {
+      target.src = `/api/image?url=${encodeURIComponent(comic.img)}`;
+    }
+    // 3. Jika semua gagal, baru ke placeholder
+    else if (!target.src.includes('placehold.co')) {
+      target.src = "https://placehold.co/400x600/png?text=Gambar+Error";
+    }
+  }}
+  className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
+/>
                       <div className="absolute top-0 right-0 bg-gray-900 text-white font-mono text-[10px] font-bold px-2 py-1 uppercase tracking-widest">
                         {normalizeType(comic.type)}
                       </div>
@@ -304,7 +313,7 @@ export default function ComicGrid({
         )}
       </div>
 
-      {/* PAGINATION BAR */}
+      {/* Pagination bar... (sama seperti sebelumnya) */}
       {!isLoading && uniqueComics.length > 0 && (
         <div className="mt-12 pt-6 border-t-2 border-gray-900 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="font-mono text-sm text-gray-600 font-bold uppercase tracking-widest">

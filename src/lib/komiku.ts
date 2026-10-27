@@ -5,39 +5,22 @@ const KOMIKU_BASE = "https://komiku.org";
 const KOMIKU_API = "https://api.komiku.org";
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-// Mapping Slug Genre
 const GENRE_SLUGS: Record<string, string> = {
-  "Action": "action",
-  "Romance": "romance", 
-  "Isekai": "isekai",
-  "Murim": "martial-arts", 
-  "School Life": "school-life",
-  "Fantasy": "fantasy",
-  "Comedy": "comedy",
-  "Horror": "horror",
-  "Mystery": "mystery"
+  "Action": "action", "Romance": "romance", "Isekai": "isekai",
+  "Murim": "martial-arts", "School Life": "school-life", "Fantasy": "fantasy",
+  "Comedy": "comedy", "Horror": "horror", "Mystery": "mystery"
 };
 
-// ==========================================
-// FUNGSI BANTUAN UNTUK MEMBERSIHKAN URL
-// ==========================================
+// Membersihkan URL agar tidak ada double slash (//) atau format aneh
 function cleanUrl(url: string, base: string = KOMIKU_BASE): string {
   if (!url) return "";
   let clean = url.trim();
-  
-  // Jika diawali '//', ubah jadi 'https://'
   if (clean.startsWith("//")) {
     clean = `https:${clean}`;
-  } 
-  // Jika tidak diawali 'http', gabungkan dengan base URL
-  else if (!clean.startsWith("http")) {
-    // Pastikan tidak ada double slash saat menggabungkan
+  } else if (!clean.startsWith("http")) {
     clean = `${base}${clean.startsWith("/") ? "" : "/"}${clean}`;
   }
-  
-  // Bersihkan double slash yang tidak perlu (kecuali pada 'https://')
   clean = clean.replace(/([^:]\/)\/+/g, "$1");
-  
   return clean;
 }
 
@@ -45,82 +28,57 @@ async function fetchHtml(url: string): Promise<string> {
   try {
     const res = await fetch(url, {
       headers: {
-        // Header super lengkap untuk memancing agar tidak dianggap bot
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
+        "User-Agent": USER_AGENT,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Referer": KOMIKU_BASE, 
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "cross-site",
-        "Sec-Fetch-User": "?1",
-        "Upgrade-Insecure-Requests": "1",
       },
-      signal: AbortSignal.timeout(15000), // Timeout 15 detik
-      next: { revalidate: 3600 } // Simpan di cache Vercel selama 1 jam
+      signal: AbortSignal.timeout(15000),
+      next: { revalidate: 3600 } // Cache 1 jam
     });
 
     if (res.ok) return await res.text();
-    
-    // Jika tetap diblokir (403), ini akan muncul di log Vercel
-    console.error(`[KOMIKU] Gagal fetch. Status: ${res.status} ${res.statusText}`);
+    console.error(`[KOMIKU] Gagal fetch. Status: ${res.status}`);
   } catch (error) {
     console.log(`[KOMIKU] Fetch error pada ${url}: ${(error as Error).message}`);
   }
   return "";
 }
+
 function parseKomikuPage(html: string): any[] {
   const $ = cheerio.load(html);
   const comics: any[] = [];
   const seenIds = new Set<string>();
+  const selectors = ['.bge', '.manga-item', '.list-comic', '.comic-item', '.item'];
 
-  const possibleSelectors = ['.bge', '.manga-item', '.list-comic', '.comic-item', '.item'];
-
-  for (const selector of possibleSelectors) {
+  for (const selector of selectors) {
     $(selector).each((i, el) => {
       const container = $(el);
       const linkEl = container.find('a[href*="/manga/"], a[href*="/komik/"]').first();
       const href = linkEl.attr('href');
-      
       if (!href) return;
 
       const imgEl = container.find('img').first();
-      let img = imgEl.attr('src') || imgEl.attr('data-src') || imgEl.attr('data-lazy-src') || "";
+      let img = imgEl.attr('data-src') || imgEl.attr('src') || imgEl.attr('data-lazy-src') || "";
       if (!img || img.startsWith('data:image')) return;
 
-      let title = container.find('.judul, .title, h3, h4, .tpel_inf').text().trim() 
-               || linkEl.attr('title') 
-               || imgEl.attr('alt') 
-               || linkEl.text().trim();
-
+      let title = container.find('.judul, .title, h3, h4, .tpel_inf').text().trim() || linkEl.attr('title') || imgEl.attr('alt') || linkEl.text().trim();
       if (!title) {
         const urlParts = href.split('/').filter(Boolean);
-        if (urlParts.length > 0) {
-          title = urlParts[urlParts.length - 1].replace(/-/g, ' ');
-        }
+        if (urlParts.length > 0) title = urlParts[urlParts.length - 1].replace(/-/g, ' ');
       }
-      
       title = title.replace(/^(Sampul|Cover)\s+/i, '').replace(/\s+/g, ' ').trim();
 
       let chapterNumber = "?";
       const chapterLink = container.find('a[href*="chapter-"], a[href*="ch-"]').last();
       if (chapterLink.length > 0) {
-        const chapterHref = chapterLink.attr('href') || "";
-        const matchUrl = chapterHref.match(/(?:chapter|ch)-(\d+(\.\d+)?)/i);
-        if (matchUrl) {
-          chapterNumber = matchUrl[1];
-        } else {
-          const textMatch = chapterLink.text().match(/(\d+(\.\d+)?)/);
-          if (textMatch) chapterNumber = textMatch[1];
-        }
+        const match = (chapterLink.attr('href') || "").match(/(?:chapter|ch)-(\d+(\.\d+)?)/i) || chapterLink.text().match(/(\d+(\.\d+)?)/);
+        if (match) chapterNumber = match[1];
       } else {
-        const chapterText = container.find('.up, .newch, .chapter').text();
-        const matchText = chapterText.match(/(\d+(\.\d+)?)/);
-        if (matchText) chapterNumber = matchText[0];
+        const match = container.find('.up, .newch, .chapter').text().match(/(\d+(\.\d+)?)/);
+        if (match) chapterNumber = match[0];
       }
 
       if (title && title.length > 2) {
-        // PERBAIKAN: Gunakan cleanUrl
         const fullUrl = cleanUrl(href);
         const fullImg = cleanUrl(img);
         const comicId = `komiku:${encodeURIComponent(fullUrl)}`;
@@ -133,62 +91,35 @@ function parseKomikuPage(html: string): any[] {
           else if (cardText.includes("manhua")) typeText = "Manhua";
 
           comics.push({
-            id: comicId, 
-            title, 
-            type: typeText, 
-            img: fullImg, 
-            rating: 5, 
-            readers: "Komiku", 
-            chapters: chapterNumber, 
-            source: "komiku" as const
+            id: comicId, title, type: typeText, img: fullImg, 
+            rating: 5, readers: "Komiku", chapters: chapterNumber, source: "komiku"
           });
         }
       }
     });
     if (comics.length > 0) break;
   }
-
   return comics;
 }
 
-// ==========================================
-// SCRAPING (Hanya berjalan di LOCAL)
-// ==========================================
-export async function scrapeKomikuPopular(
-  page: number = 1, 
-  limit: number = 20, 
-  category: string = "Semua",
-  genre: string = "Semua"
-): Promise<{ data: any[], total: number }> {
+// Fallback Scraper (Hanya jalan di localhost)
+export async function scrapeKomikuPopular(page = 1, limit = 20, category = "Semua", genre = "Semua"): Promise<{ data: any[], total: number }> {
   try {
     let allComics: any[] = [];
     let baseUrl = `${KOMIKU_API}/manga`;
-    
-    if (genre !== "Semua" && GENRE_SLUGS[genre]) {
-      baseUrl = `${KOMIKU_API}/genre/${GENRE_SLUGS[genre]}`;
-    }
+    if (genre !== "Semua" && GENRE_SLUGS[genre]) baseUrl = `${KOMIKU_API}/genre/${GENRE_SLUGS[genre]}`;
 
     const pagesToFetch = 10; 
-    const urlsToFetch = Array.from({ length: pagesToFetch }, (_, i) => 
-      `${baseUrl}/page/${i + 1}/`
-    );
-
-    const fetchPromises = urlsToFetch.map(url => fetchHtml(url));
-    const htmlResults = await Promise.all(fetchPromises);
+    const urls = Array.from({ length: pagesToFetch }, (_, i) => `${baseUrl}/page/${i + 1}/`);
+    const htmlResults = await Promise.all(urls.map(url => fetchHtml(url)));
     
-    htmlResults.forEach(html => {
-      if (html) allComics.push(...parseKomikuPage(html));
-    });
+    htmlResults.forEach(html => { if (html) allComics.push(...parseKomikuPage(html)); });
 
     if (allComics.length === 0 && genre !== "Semua") {
-      const webBaseUrl = `${KOMIKU_BASE}/genre/${GENRE_SLUGS[genre]}`;
-      const webUrls = Array.from({ length: pagesToFetch }, (_, i) => 
-        i === 0 ? `${webBaseUrl}/` : `${webBaseUrl}/page/${i + 1}/`
-      );
+      const webBase = `${KOMIKU_BASE}/genre/${GENRE_SLUGS[genre]}`;
+      const webUrls = Array.from({ length: pagesToFetch }, (_, i) => i === 0 ? `${webBase}/` : `${webBase}/page/${i + 1}/`);
       const webHtmls = await Promise.all(webUrls.map(url => fetchHtml(url)));
-      webHtmls.forEach(html => {
-        if (html) allComics.push(...parseKomikuPage(html));
-      });
+      webHtmls.forEach(html => { if (html) allComics.push(...parseKomikuPage(html)); });
     }
 
     if (category !== "Semua") {
@@ -203,28 +134,15 @@ export async function scrapeKomikuPopular(
     });
 
     const offset = (page - 1) * limit;
-    const paginatedData = uniqueComics.slice(offset, offset + limit);
-
-    return { data: paginatedData, total: uniqueComics.length };
+    return { data: uniqueComics.slice(offset, offset + limit), total: uniqueComics.length };
   } catch (error) {
-    console.error("[KOMIKU] Gagal ambil populer:", error);
     return { data: [], total: 0 };
   }
 }
 
-// ==========================================
-// BACA DARI SUPABASE (Digunakan Situs Production)
-// ==========================================
-export async function getKomikuPopularManga(
-  page: number = 1,
-  limit: number = 20,
-  category: string = 'Semua',
-  genre: string = 'Semua'
-): Promise<{ data: any[]; total: number }> {
-  const sb = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+// Baca dari Supabase (Prioritas Utama)
+export async function getKomikuPopularManga(page = 1, limit = 20, category = 'Semua', genre = 'Semua'): Promise<{ data: any[]; total: number }> {
+  const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   
   let q = sb.from('komiku_comics').select('id,title,type,img,chapters', { count: 'exact' });
   if (category !== 'Semua') q = q.ilike('type', category);
@@ -235,12 +153,12 @@ export async function getKomikuPopularManga(
   
   if (!error && data && data.length > 0) {
     return {
-      data: data.map((c) => ({ ...c, rating: 5, readers: 'Komiku', source: 'komiku' as const })),
+      data: data.map((c) => ({ ...c, img: cleanUrl(c.img), rating: 5, readers: 'Komiku', source: 'komiku' })),
       total: count ?? data.length,
     };
   }
 
-  // Fallback scraping (hanya untuk localhost)
+  // Hanya lakukan scraping di localhost
   if (process.env.NODE_ENV !== 'production') {
     return scrapeKomikuPopular(page, limit, category, genre);
   }
@@ -253,23 +171,19 @@ export async function getKomikuMangaDetail(url: string) {
     const cleanMangaUrl = cleanUrl(url);
     const html = await fetchHtml(cleanMangaUrl);
     
-    // JIKA GAGAL FETCH (Diblokir Cloudflare/Timeout)
     if (!html) {
       const slug = cleanMangaUrl.split("/manga/")[1]?.replace("/", "") || "komik";
       return {
         title: slug.replace(/-/g, " ").toUpperCase(),
         img: "https://placehold.co/400x600/png?text=Gambar+Tidak+Tersedia",
         description: "Gagal memuat deskripsi dari Komiku (Server memblokir akses).",
-        chapters: [],
-        url: cleanMangaUrl
+        chapters: [], url: cleanMangaUrl
       };
     }
 
     const $ = cheerio.load(html);
     const title = $('h1[itemprop="name"], .judul h1, h1').first().text().trim() || "Judul Tidak Diketahui";
-    let img = $('img[itemprop="image"], .ims img, .thumb img').attr('src') || "";
-    img = cleanUrl(img);
-    
+    let img = cleanUrl($('img[itemprop="image"], .ims img, .thumb img').attr('src') || "");
     const description = $('.desc, #sinopsis, [itemprop="description"]').text().trim().replace(/\s+/g, ' ') || "Belum ada deskripsi.";
     
     const chapters: any[] = [];
@@ -291,60 +205,37 @@ export async function getKomikuMangaDetail(url: string) {
   }
 }
 
-// ==========================================
-// FUNGSI GAMBAR CHAPTER
-// ==========================================
 export async function getKomikuChapterPages(url: string): Promise<string[]> {
   try {
     if (!url.startsWith("http")) return [];
-    const cleanChapterUrl = cleanUrl(url);
-    const html = await fetchHtml(cleanChapterUrl);
+    const html = await fetchHtml(cleanUrl(url));
     if (!html) return [];
     
     const $ = cheerio.load(html);
     const images: string[] = [];
-    const possibleSelectors = ['#Baca_Komik img', '.main-reading-area img', '.chapter-img img', '#readerarea img', '.reading-content img'];
+    const selectors = ['#Baca_Komik img', '.main-reading-area img', '.chapter-img img', '#readerarea img', '.reading-content img'];
     
-    // Di dalam fungsi getKomikuChapterPages...
-    for (const selector of possibleSelectors) {
+    for (const selector of selectors) {
       const foundImages = $(selector);
       if (foundImages.length > 0) {
         foundImages.each((i, el) => {
-          // Ambil URL dan Alt
           let src = $(el).attr('data-src') || $(el).attr('data-original') || $(el).attr('data-lazy-src') || $(el).attr('src');
           let alt = ($(el).attr('alt') || "").toLowerCase();
-          
-          // Ambil class dari elemen pembungkus (div) gambar
           const parentClass = ($(el).parent().attr('class') || "").toLowerCase();
           const parentId = ($(el).parent().attr('id') || "").toLowerCase();
 
           if (src && !src.startsWith('data:')) {
             const fullImg = cleanUrl(src);
             const lowerImg = fullImg.toLowerCase();
-
-            // 1. Daftar kata kunci URL yang DILARANG (diperluas)
-            const blacklistUrls = [
-              "logo", "banner", "promo", "iklan", "credit", "natsu", "donasi",
-              "mgkomik", "mirror", "join", "gacor", "slot", "judi", "ads", 
-              "komikindo", "westmanga", "kiryuu", "shinigami", "sektekomik", "baca"
-            ];
             
-            // 2. Daftar kata kunci ALT yang DILARANG
-            const blacklistAlts = [
-              "komiku", "baca", "iklan", "promo", "credit", "mgkomik", "mirror", "join", "banner"
-            ];
-
-            // 3. Daftar class/id parent yang DILARANG (Sangat ampuh untuk iklan)
+            const blacklistUrls = ["logo", "banner", "promo", "iklan", "credit", "natsu", "donasi", "mgkomik", "mirror", "join", "gacor", "slot", "judi", "ads", "komikindo", "westmanga", "kiryuu", "shinigami", "sektekomik", "baca"];
+            const blacklistAlts = ["komiku", "baca", "iklan", "promo", "credit", "mgkomik", "mirror", "join", "banner"];
             const blacklistParents = ["ads", "banner", "promo", "iklan", "ad-container"];
 
-            // Pengecekan
             const isUrlBlacklisted = blacklistUrls.some(k => lowerImg.includes(k));
             const isAltBlacklisted = blacklistAlts.some(k => alt.includes(k));
             const isParentBlacklisted = blacklistParents.some(k => parentClass.includes(k) || parentId.includes(k));
 
-            // 4. FILTER TAMBAHAN: Buang gambar jika itu gambar pertama (index 0) 
-            // DAN memiliki tinggi/lebar yang tidak wajar (kadang sulit dideteksi via cheerio)
-            // Jadi kita gabungkan semua pengecekan blacklist di atas.
             if (!isUrlBlacklisted && !isAltBlacklisted && !isParentBlacklisted) {
               images.push(fullImg);
             }
@@ -353,65 +244,64 @@ export async function getKomikuChapterPages(url: string): Promise<string[]> {
         if (images.length > 0) break;
       }
     }
-
     return images;
   } catch (error) {
     return [];
   }
 }
 
-// ==========================================
-// FUNGSI PENCARIAN (SEARCH SUPABASE DULU)
-// ==========================================
 export async function searchKomiku(query: string): Promise<any[]> {
   try {
-    // 1. CARI DI SUPABASE TERLEBIH DAHULU
-    const sb = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    
-    const { data, error } = await sb
-      .from('komiku_comics')
-      .select('*')
-      .ilike('title', `%${query}%`)
-      .limit(20);
+    let results: any[] = [];
+    const seenIds = new Set<string>();
 
-    if (!error && data && data.length > 0) {
-      return data.map(c => ({
-        ...c,
-        rating: 5,
-        readers: "Komiku",
-        source: "komiku"
-      }));
+    // 1. CARI DI SUPABASE
+    const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+    const { data, error } = await sb.from('komiku_comics').select('*').ilike('title', `%${query}%`).limit(20);
+
+    if (!error && data) {
+      data.forEach(c => {
+        seenIds.add(c.id);
+        results.push({ ...c, img: cleanUrl(c.img), rating: 5, readers: "Komiku", source: "komiku" });
+      });
     }
 
-    // 2. JIKA TIDAK KETEMU DI DB & SEDANG DI LOCALHOST, LAKUKAN SCRAPING
+    // 2. SCRAPING AGRESIF (LOKAL SAJA)
     if (process.env.NODE_ENV !== 'production') {
-      let allResults: any[] = [];
-      const seenIds = new Set<string>();
-      const maxPages = 3;
-
-      for (let page = 1; page <= maxPages; page++) {
-        const apiUrl = `${KOMIKU_API}/?s=${encodeURIComponent(query)}&post_type=manga&paged=${page}`;
+      
+      // A. Coba lewat API (biasanya lebih bersih)
+      try {
+        const apiUrl = `${KOMIKU_API}/?s=${encodeURIComponent(query)}&post_type=manga`;
         const apiHtml = await fetchHtml(apiUrl);
-        if (!apiHtml) break;
+        if (apiHtml) {
+          const parsed = parseKomikuPage(apiHtml);
+          parsed.forEach((c: any) => {
+            if (!seenIds.has(c.id)) { seenIds.add(c.id); results.push(c); }
+          });
+        }
+      } catch (e) {} // Abaikan jika API mati/404
 
-        const parsed = parseKomikuPage(apiHtml);
-        if (parsed.length === 0) break;
+      // B. Coba lewat Web (jika API tidak menghasilkan apa-apa)
+      if (results.length <= 1) {
+        for (let page = 1; page <= 2; page++) {
+          const webUrl = page === 1 
+            ? `${KOMIKU_BASE}/?s=${encodeURIComponent(query)}`
+            : `${KOMIKU_BASE}/page/${page}/?s=${encodeURIComponent(query)}`;
+            
+          const webHtml = await fetchHtml(webUrl);
+          if (!webHtml) break;
 
-        parsed.forEach((c: any) => {
-          if (!seenIds.has(c.id)) {
-            seenIds.add(c.id);
-            allResults.push(c);
-          }
-        });
+          const parsed = parseKomikuPage(webHtml);
+          if (parsed.length === 0) break;
+
+          parsed.forEach((c: any) => {
+            if (!seenIds.has(c.id)) { seenIds.add(c.id); results.push(c); }
+          });
+        }
       }
-
-      return allResults;
     }
 
-    return [];
+    return results;
   } catch (error) {
     console.error("[KOMIKU] Gagal search:", error);
     return [];

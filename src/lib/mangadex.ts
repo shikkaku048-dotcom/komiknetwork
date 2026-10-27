@@ -54,51 +54,47 @@ function setCached(key: string, data: any, ttlMs: number) {
 async function fetchJSON<T = any>(
   url: string,
   ttlMs = 3_600_000,
-  timeoutMs = 6000
+  timeoutMs = 15000 
 ): Promise<T> {
   const cached = getCached<T>(url);
   if (cached) return cached;
 
   try {
+    // 1. COBA LANGSUNG (Cepat)
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        Accept: "application/json",
+        "User-Agent": "KomikNetwork/1.0 (https://komiknet.site)", 
+        "Accept": "application/json",
       },
       signal: AbortSignal.timeout(timeoutMs),
       next: { revalidate: Math.floor(ttlMs / 1000) },
     });
+    
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = (await res.json()) as T;
     setCached(url, data, ttlMs);
     return data;
   } catch (err) {
-    const stale = STALE.get(url);
-    if (stale !== undefined) {
-      console.warn(`[MANGADEX] stale fallback: ${(err as Error).message}`);
-      return stale as T;
+    // 2. JIKA GAGAL (Diblokir ISP/MangaDex), PAKAI PROXY CADANGAN
+    try {
+      // Menggunakan corsproxy.io yang jauh lebih cepat dari allorigins
+      const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(url)}`;
+      const res = await fetch(proxyUrl, {
+         headers: { "User-Agent": "Mozilla/5.0" },
+         signal: AbortSignal.timeout(timeoutMs) 
+      });
+      
+      if (!res.ok) throw new Error(`Proxy HTTP: ${res.status}`);
+      const data = (await res.json()) as T;
+      setCached(url, data, ttlMs);
+      return data;
+    } catch (proxyErr) {
+       // 3. FALLBACK KE CACHE LAMA JIKA SEMUA GAGAL
+       const stale = STALE.get(url);
+       if (stale !== undefined) return stale as T;
+       throw new Error(`Fetch & Proxy gagal: ${(proxyErr as Error).message}`);
     }
-    throw err;
   }
-}
-
-async function mapLimit<T, R>(
-  items: T[],
-  limit: number,
-  fn: (item: T, i: number) => Promise<R>
-): Promise<R[]> {
-  const out: R[] = new Array(items.length);
-  let idx = 0;
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (true) {
-      const i = idx++;
-      if (i >= items.length) return;
-      try { out[i] = await fn(items[i], i); }
-      catch { out[i] = undefined as any; }
-    }
-  });
-  await Promise.all(workers);
-  return out;
 }
 
 async function safe<T>(fn: () => Promise<T>, fallback: T, label: string): Promise<T> {
@@ -162,7 +158,7 @@ function toCard(manga: any, stats: Record<string, any>, extraChapters?: string |
 }
 
 // ============================================
-// STATISTICS — 1 batch 100 id, parallel, cached 1 jam
+// STATISTICS
 // ============================================
 async function fetchStatistics(ids: string[]): Promise<Record<string, any>> {
   if (ids.length === 0) return {};
@@ -224,20 +220,6 @@ async function fetchPopularByLang(langs: string[], limit: number) {
   return { data: (json.data as any[]) ?? [], total: (json.total as number) ?? 0 };
 }
 
-async function fetchLatestChapterNumber(id: string): Promise<string | null> {
-  try {
-    const json = await fetchJSON(`${BASE}/manga/${id}/aggregate`, 86_400_000, 5000);
-    let max = 0;
-    for (const vol of Object.values(json.volumes ?? {}) as any[]) {
-      for (const ch of Object.values(vol.chapters ?? {}) as any[]) {
-        const n = parseFloat(ch?.chapter);
-        if (!isNaN(n) && n > max) max = n;
-      }
-    }
-    return max ? String(max) : null;
-  } catch { return null; }
-}
-
 async function fetchPopularCached(): Promise<{ data: ComicCard[]; total: number }> {
   try {
     const [ja, ko, zh] = await Promise.all([
@@ -251,18 +233,8 @@ async function fetchPopularCached(): Promise<{ data: ComicCard[]; total: number 
     list = Array.from(new Map(list.map((m) => [m.id, m])).values());
     if (list.length === 0) return { data: [], total: 0 };
 
-    // 1 batch parallel (bukan sequential loop)
     const stats = await fetchStatistics(list.map((m) => m.id));
-
-    // aggregate: concurrency 4, bukan batch sequential
-    const missing = list.filter((m) => !m.attributes.lastChapter);
-    const latest: Record<string, string | null> = {};
-    if (missing.length > 0) {
-      const results = await mapLimit(missing, 4, (m) => fetchLatestChapterNumber(m.id));
-      missing.forEach((m, i) => { latest[m.id] = results[i]; });
-    }
-
-    const data = list.map((m) => toCard(m, stats, latest[m.id]));
+    const data = list.map((m) => toCard(m, stats));
     return { data, total: totalCount };
   } catch {
     return { data: [], total: 0 };
@@ -274,7 +246,7 @@ export async function getPopularManga() {
 }
 
 // ============================================
-// KATEGORI (dipakai /api/comics)
+// KATEGORI
 // ============================================
 export async function getMangaByCategory(
   category = "Semua",
@@ -312,8 +284,6 @@ export async function getMangaByCategory(
   try {
     const json = await fetchJSON(url, 3_600_000);
     const list = (json.data as any[]) ?? [];
-
-    // cache 1 jam, parallel, bukan sequential
     const stats = await fetchStatistics(list.map((m) => m.id));
 
     return { data: list.map((m) => toCard(m, stats)), total: (json.total as number) ?? 0 };

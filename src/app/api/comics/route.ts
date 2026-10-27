@@ -98,10 +98,29 @@ export async function GET(req: NextRequest) {
     const mdxRes = mdxS.status === "fulfilled" ? mdxS.value : { data: [], total: 0 };
     const komikuRes = komikuS.status === "fulfilled" ? komikuS.value : { data: [], total: 0 };
 
-    let combined = [...mdxRes.data, ...komikuRes.data];
+    let combined: any[] = [];
+    
+    // JIKA SORT "POPULER", GUNAKAN SELANG-SELING (INTERLEAVING) AGAR ADIL
+    if (sort === "Populer") {
+      let mdxIdx = 0;
+      let komikuIdx = 0;
+      // Selama masih ada data di salah satu sumber, masukkan bergantian
+      while (mdxIdx < mdxRes.data.length || komikuIdx < komikuRes.data.length) {
+        if (mdxIdx < mdxRes.data.length) combined.push(mdxRes.data[mdxIdx++]);
+        if (komikuIdx < komikuRes.data.length) combined.push(komikuRes.data[komikuIdx++]);
+      }
+    } else {
+      // Jika sort A-Z atau Rating, gabungkan biasa lalu urutkan
+      combined = [...mdxRes.data, ...komikuRes.data];
+    }
+
     combined = filterCategory(combined, category);
     combined = deduplicate(combined);
-    combined = sortData(combined, sort);
+    
+    // HANYA SORT ULANG JIKA BUKAN "POPULER"
+    if (sort !== "Populer") {
+      combined = sortData(combined, sort);
+    }
 
     const offset = (page - 1) * limit;
     const paginated = combined.slice(offset, offset + limit);

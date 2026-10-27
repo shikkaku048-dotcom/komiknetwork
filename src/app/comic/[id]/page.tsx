@@ -11,7 +11,8 @@ import type { Metadata } from "next";
 import { getKomikuMangaDetail } from "@/lib/komiku";
 import ChapterList from "@/components/ChapterList";
 import BookmarkButton from "@/components/BookmarkButton";
-import { getImageUrl } from "@/lib/imageHelper"; // <-- TAMBAHAN IMPORT
+import { getImageUrl } from "@/lib/imageHelper";
+import SafeImage from "@/components/SafeImage"; // <-- IMPORT SAFEIMAGE
 
 type ChapterItem = {
   id: string;
@@ -81,8 +82,10 @@ function ComicInfo({ manga }: { manga: any }) {
         <div className="lg:col-span-5 relative group self-start">
           <div className="absolute inset-0 border border-gray-400 translate-x-3 translate-y-3 pointer-events-none"></div>
           <div className="overflow-hidden border border-gray-900 relative z-10 bg-gray-100">
-            <img 
-              src={getImageUrl(coverUrl)} // <-- REVISI
+            {/* REVISI: Gunakan SafeImage */}
+            <SafeImage 
+              src={getImageUrl(coverUrl)} 
+              originalSrc={coverUrl}
               alt={`Cover komik ${title}`} 
               className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-105" 
             />
@@ -125,8 +128,10 @@ function KomikuComicInfo({ manga }: { manga: any }) {
         <div className="lg:col-span-5 relative group self-start">
           <div className="absolute inset-0 border border-gray-400 translate-x-3 translate-y-3 pointer-events-none"></div>
           <div className="overflow-hidden border border-gray-900 relative z-10 bg-gray-100">
-            <img 
-              src={getImageUrl(manga.img)} // <-- REVISI
+            {/* REVISI: Gunakan SafeImage */}
+            <SafeImage 
+              src={getImageUrl(manga.img)} 
+              originalSrc={manga.img}
               alt={`Cover komik ${manga.title}`} 
               className="w-full aspect-[3/4] object-cover transition-transform duration-500 group-hover:scale-105" 
             />
@@ -214,7 +219,7 @@ async function ComicDetailsWrapper({ params }: { params: Promise<{ id: string }>
   // ROUTE MANGADEX
   let mangaData = null;
   try { mangaData = await getMangaById(decodedId); } catch (e) {}
-  if (!mangaData?.data) return <ErrorState msg="Data MangaDex Terputus" />;
+  if (!mangaData?.data) return <ErrorState msg="Data MangaDex Terputus atau diblokir sementara." />;
 
   const manga = mangaData.data;
   const coverArt = manga.relationships.find((rel: any) => rel.type === "cover_art");

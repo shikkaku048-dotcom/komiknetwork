@@ -5,11 +5,19 @@ export function getImageUrl(originalUrl: string | undefined | null) {
   
   const lowerUrl = originalUrl.toLowerCase();
 
-  // 1. HANYA KOMIKU YANG DILEWATKAN KE WSRV.NL (Agar tidak kena limit)
-  if (lowerUrl.includes("komiku.org") || lowerUrl.includes("komiktap")) {
+  // SEMUA GAMBAR KOMIKU WAJIB LEWAT WSRV.NL
+  if (
+    lowerUrl.includes("komiku.org") || 
+    lowerUrl.includes("komiku.to") || 
+    lowerUrl.includes("komiktap")
+  ) {
     return `https://wsrv.nl/?url=${encodeURIComponent(originalUrl)}&w=400`;
   }
 
-  // 2. MANGADEX & LAINNYA: Langsung saja (MangaDex punya CDN sendiri yang cepat & tidak blokir)
-  return originalUrl; 
+  // MANGADEX: Direct Link
+  if (lowerUrl.includes("mangadex.org")) {
+    return originalUrl; 
+  }
+
+  return `/api/image?url=${encodeURIComponent(originalUrl)}`;
 }

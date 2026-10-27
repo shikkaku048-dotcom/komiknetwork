@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { Star } from "lucide-react";
 import { getRecentChapters, getTopRatedManga } from "@/lib/mangadex";
 import { getImageUrl } from "@/lib/imageHelper";
-import SafeImage from "@/components/SafeImage"; // <-- TAMBAHAN IMPORT
+import SafeImage from "@/components/SafeImage";
 
 function SidebarSkeleton() {
   return (
@@ -52,7 +52,7 @@ async function SidebarContent() {
               <div className="w-24 h-36 md:w-32 md:h-48 flex-shrink-0 bg-white border-2 border-gray-900 shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-all duration-300 group-hover:shadow-none group-hover:translate-x-[4px] group-hover:translate-y-[4px] overflow-hidden">
                 <SafeImage 
                   src={getImageUrl(ch.img)} 
-                  originalSrc={ch.img} // <-- TAMBAHAN UNTUK FALLBACK
+                  originalSrc={ch.img}
                   alt={ch.title} 
                   className="w-full h-full object-cover group-hover:scale-105 transition duration-500" 
                 />
@@ -96,7 +96,7 @@ async function SidebarContent() {
                 <div className="relative w-24 h-36 md:w-32 md:h-48 flex-shrink-0 bg-white border-2 border-gray-900 shadow-[4px_4px_0px_rgba(0,0,0,1)] transition-all duration-300 group-hover:shadow-none group-hover:translate-x-[4px] group-hover:translate-y-[4px] overflow-hidden">
                   <SafeImage 
                     src={getImageUrl(manga.img)} 
-                    originalSrc={manga.img} // <-- TAMBAHAN UNTUK FALLBACK
+                    originalSrc={manga.img}
                     alt={manga.title} 
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-500" 
                   />
