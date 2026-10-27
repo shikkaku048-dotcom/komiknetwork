@@ -112,20 +112,21 @@ export default function Hero({ mangas }: { mangas?: HeroManga[] }) {
           return (
             <div key={manga.id} className="w-full h-full flex-shrink-0 relative">
               <div className="absolute inset-0">
-<img
-  src={getImageUrl(manga.img)}
-  alt={manga.title}
-  // REVISI: Ubah fallback ke placeholder jika wsrv gagal
-  onError={(e) => {
-    if (!e.currentTarget.src.includes('placehold.co')) {
-      e.currentTarget.src = "https://placehold.co/1920x1080/111/fff?text=Gambar+Error";
-    }
-  }}
-  loading={isFirstSlide ? "eager" : "lazy"}
-  fetchPriority={isFirstSlide ? "high" : "auto"}
-  decoding={isFirstSlide ? "sync" : "async"}
-  className="w-full h-full object-cover object-top opacity-40 bg-[#111]"
-/>
+                <img
+                  src={getImageUrl(manga.img)}
+                  alt={manga.title}
+                  referrerPolicy="no-referrer" // <-- KUNCI AGAR MANGADEX TIDAK BLOKIR
+                  onError={(e) => {
+                    // Jika gambar gagal dimuat, langsung tampilkan placeholder
+                    if (!e.currentTarget.src.includes('placehold.co')) {
+                      e.currentTarget.src = "https://placehold.co/1920x1080/111/fff?text=Gambar+Error";
+                    }
+                  }}
+                  loading={isFirstSlide ? "eager" : "lazy"}
+                  fetchPriority={isFirstSlide ? "high" : "auto"}
+                  decoding={isFirstSlide ? "sync" : "async"}
+                  className="w-full h-full object-cover object-top opacity-40 bg-[#111]"
+                />
                 <div className="absolute inset-0 bg-gradient-to-r from-[#111] via-[#111]/95 to-transparent" />
               </div>
 

@@ -5,7 +5,7 @@ export function getImageUrl(originalUrl: string | undefined | null) {
   
   const lowerUrl = originalUrl.toLowerCase();
 
-  // SEMUA GAMBAR KOMIKU WAJIB LEWAT WSRV.NL
+  // Komiku wajib lewat wsrv.nl karena blokir hotlink
   if (
     lowerUrl.includes("komiku.org") || 
     lowerUrl.includes("komiku.to") || 
@@ -14,10 +14,6 @@ export function getImageUrl(originalUrl: string | undefined | null) {
     return `https://wsrv.nl/?url=${encodeURIComponent(originalUrl)}&w=400`;
   }
 
-  // MANGADEX: Direct Link
-  if (lowerUrl.includes("mangadex.org")) {
-    return originalUrl; 
-  }
-
-  return `/api/image?url=${encodeURIComponent(originalUrl)}`;
+  // MangaDex & lainnya: Langsung (Jangan lewat proxy agar tidak limit)
+  return originalUrl; 
 }
