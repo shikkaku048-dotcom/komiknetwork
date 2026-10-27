@@ -43,30 +43,32 @@ function cleanUrl(url: string, base: string = KOMIKU_BASE): string {
 
 async function fetchHtml(url: string): Promise<string> {
   try {
-    let targetUrl = url;
-    
-    // JIKA DI PRODUCTION (CLOUDFLARE), GUNAKAN PROXY VERCEL
-    if (process.env.NODE_ENV === "production") {
-      // Ganti dengan URL Vercel kamu yang barusan
-      const vercelProxy = "https://anilist-proxy-alpha.vercel.app/api/scrape";
-      targetUrl = `${vercelProxy}?url=${encodeURIComponent(url)}`;
-    }
-
-    const res = await fetch(targetUrl, {
+    const res = await fetch(url, {
       headers: {
-        "User-Agent": USER_AGENT,
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        // Header super lengkap untuk memancing agar tidak dianggap bot
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
         "Referer": KOMIKU_BASE, 
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "cross-site",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
       },
-      signal: AbortSignal.timeout(15000), // Naikkan timeout karena lewat proxy
+      signal: AbortSignal.timeout(15000), // Timeout 15 detik
+      next: { revalidate: 3600 } // Simpan di cache Vercel selama 1 jam
     });
+
     if (res.ok) return await res.text();
+    
+    // Jika tetap diblokir (403), ini akan muncul di log Vercel
+    console.error(`[KOMIKU] Gagal fetch. Status: ${res.status} ${res.statusText}`);
   } catch (error) {
     console.log(`[KOMIKU] Fetch error pada ${url}: ${(error as Error).message}`);
   }
   return "";
 }
-
 function parseKomikuPage(html: string): any[] {
   const $ = cheerio.load(html);
   const comics: any[] = [];
