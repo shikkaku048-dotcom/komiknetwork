@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 export default function ReaderHeader({ comicId }: { comicId: string }) {
+  const router = useRouter();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
@@ -23,8 +25,7 @@ export default function ReaderHeader({ comicId }: { comicId: string }) {
   }, [lastScrollY]);
 
   const handleBack = () => {
-    // TRIK BRUTAL: Paksa pindah ke Detail dengan Hard Reload.
-    window.location.href = `/comic/${comicId}`;
+    router.back(); // Kembali ke Detail
   };
 
   return (

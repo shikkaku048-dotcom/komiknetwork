@@ -5,7 +5,8 @@ import Header from "@/components/Header";
 import ConditionalHeader from "@/components/ConditionalHeader";
 import Footer from "@/components/Footer"; 
 import OptimizationNotice from "@/components/OptimizationNotice"; 
-// import DownloadAppModal from "@/components/DownloadAppModal"; // <-- DISEMBUNYIKAN SEMENTARA
+import ScrollToTop from "@/components/ScrollToTop"; // <-- 1. TAMBAHKAN IMPORT INI
+// import DownloadAppModal from "@/components/DownloadAppModal"; 
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -55,6 +56,9 @@ export default function RootLayout({
     <html lang="id">
       <body className={`${inter.className} min-h-screen flex flex-col bg-[#f4f4f4] antialiased`}>
         
+        {/* 2. PANGGIL SCROLLTOTOP DI SINI */}
+        <ScrollToTop />
+
         {/* Script Midtrans */}
         <Script 
           src="https://app.sandbox.midtrans.com/snap/snap.js" 
@@ -62,7 +66,7 @@ export default function RootLayout({
           strategy="beforeInteractive" 
         />
         
-        {/* CARD MELAYANG OPTIMALISASI (Aktif) */}
+        {/* CARD MELAYANG OPTIMALISASI */}
         <OptimizationNotice />
 
         {/* IKLAN DOWNLOAD APK (Disembunyikan) */}

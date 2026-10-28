@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react"; // <-- TAMBAHKAN useEffect
 import Link from "next/link";
 import { ArrowRight, X, Crosshair } from "lucide-react";
 
@@ -20,7 +20,22 @@ const FacebookIcon = ({ className }: { className?: string }) => (
 );
 
 export default function OptimizationNotice() {
-  const [isOpen, setIsOpen] = useState(true);
+  // REVISI 1: Set default ke false agar tidak langsung muncul sebelum cek storage
+  const [isOpen, setIsOpen] = useState(false); 
+
+  // REVISI 2: Cek sessionStorage saat komponen dimuat
+  useEffect(() => {
+    const hasSeen = sessionStorage.getItem("hideMaintenanceNotice");
+    if (!hasSeen) {
+      setIsOpen(true);
+    }
+  }, []);
+
+  // REVISI 3: Fungsi khusus untuk menutup & menyimpan status
+  const handleClose = () => {
+    setIsOpen(false);
+    sessionStorage.setItem("hideMaintenanceNotice", "true");
+  };
 
   if (!isOpen) return null;
 
@@ -31,7 +46,7 @@ export default function OptimizationNotice() {
         
         {/* Tombol Close (X) */}
         <button 
-          onClick={() => setIsOpen(false)}
+          onClick={handleClose} // <-- REVISI 4: Gunakan handleClose
           className="absolute top-4 right-4 z-50 bg-[#2b3a42] text-white p-2 md:p-3 border-2 border-transparent hover:border-[#d97706] hover:bg-[#d97706] transition-colors shadow-[4px_4px_0px_rgba(0,0,0,0.3)] active:shadow-none active:translate-y-1"
         >
           <X className="w-6 h-6" />
@@ -80,10 +95,10 @@ export default function OptimizationNotice() {
             </p>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 md:gap-8 mb-4 md:mb-12">
-              {/* REVISI: Tambahkan onClick={() => setIsOpen(false)} DI SINI */}
+              {/* REVISI 5: Gunakan handleClose di sini juga */}
               <Link
                 href="/subscription"
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
                 className="bg-[#d97706] text-[#1a1a1a] font-mono text-xs md:text-sm font-bold uppercase tracking-widest py-3 px-6 flex items-center gap-4 hover:bg-[#b45309] hover:text-white transition-all border-2 border-[#2b3a42] shadow-[4px_4px_0px_#2b3a42] hover:shadow-none hover:translate-x-1 hover:translate-y-1"
               >
                 Dukung & Berlangganan <ArrowRight className="w-4 h-4" />

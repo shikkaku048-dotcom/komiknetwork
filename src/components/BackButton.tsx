@@ -1,12 +1,13 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function BackButton() {
+  const router = useRouter();
+  
   const handleBack = () => {
-    // TRIK BRUTAL: Paksa pindah ke Katalog dengan Hard Reload.
-    // Ini akan memotong semua cache dan bug scroll Next.js.
-    window.location.href = "/katalog";
+    router.back(); // Kembali ke halaman sebelumnya secara natural
   };
 
   return (
