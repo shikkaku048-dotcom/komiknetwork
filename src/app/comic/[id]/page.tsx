@@ -13,7 +13,6 @@ import ChapterList from "@/components/ChapterList";
 import BookmarkButton from "@/components/BookmarkButton";
 import { getImageUrl } from "@/lib/imageHelper";
 import SafeImage from "@/components/SafeImage";
-// TAMBAHKAN IMPORT INI
 import BackButton from "@/components/BackButton";
 import ShareButton from "@/components/ShareButton";
 
@@ -54,7 +53,7 @@ function ComicInfo({ manga, id }: { manga: any, id: string }) {
 
   return (
     <div className="relative w-full border-b border-gray-300 pb-12 mb-8">
-      <BackButton /> {/* TAMBAHKAN TOMBOL KEMBALI DI SINI */}
+      <BackButton />
       
       <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 text-gray-300"><Plus className="w-6 h-6" /></div>
       <div className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 text-gray-300"><Plus className="w-6 h-6" /></div>
@@ -75,14 +74,12 @@ function ComicInfo({ manga, id }: { manga: any, id: string }) {
             </p>
           </div>
           <div className="flex flex-col gap-6">
-            <p className="text-sm font-bold tracking-widest uppercase text-gray-500">{tags}</p>
-            <div className="flex flex-wrap gap-4 items-center">
-              <a href="#chapter-list" className="bg-[#d97706] hover:bg-[#b45309] text-white font-mono font-bold uppercase tracking-widest py-3 px-8 flex items-center gap-3 transition-colors shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1">
+            {/* REVISI BAGIAN TOMBOL */}
+            <div className="flex flex-row flex-wrap sm:flex-nowrap gap-2 md:gap-4 items-center w-full md:w-auto">
+              <a href="#chapter-list" className="bg-[#d97706] hover:bg-[#b45309] text-white font-mono text-xs md:text-sm font-bold uppercase tracking-widest py-3 px-4 md:px-8 flex items-center justify-center gap-2 transition-colors shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 whitespace-nowrap">
                 Baca Komik <ArrowRight className="w-4 h-4" />
               </a>
               <BookmarkButton comic={{ id: manga.id, title, img: coverUrl, type: manga.attributes.originalLanguage === "ko" ? "Manhwa" : "Manga", chapters: manga.attributes.lastChapter || "?", readers: "0" }} />
-              
-              {/* TAMBAHKAN TOMBOL SHARE DI SINI */}
               <ShareButton title={title} url={`https://komiknet.site/comic/${id}`} />
             </div>
           </div>
@@ -107,7 +104,7 @@ function ComicInfo({ manga, id }: { manga: any, id: string }) {
 function KomikuComicInfo({ manga, id }: { manga: any, id: string }) {
   return (
     <div className="relative w-full border-b border-gray-300 pb-12 mb-8">
-      <BackButton /> {/* TAMBAHKAN TOMBOL KEMBALI DI SINI */}
+      <BackButton />
 
       <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 text-gray-300"><Plus className="w-6 h-6" /></div>
       <div className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 text-gray-300"><Plus className="w-6 h-6" /></div>
@@ -126,13 +123,12 @@ function KomikuComicInfo({ manga, id }: { manga: any, id: string }) {
             </p>
           </div>
           <div className="flex flex-col gap-6">
-            <div className="flex flex-wrap gap-4 items-center">
-              <a href="#chapter-list" className="bg-[#d97706] hover:bg-[#b45309] text-white font-mono font-bold uppercase tracking-widest py-3 px-8 flex items-center gap-3 transition-colors shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1">
+            {/* REVISI BAGIAN TOMBOL */}
+            <div className="flex flex-row flex-wrap sm:flex-nowrap gap-2 md:gap-4 items-center w-full md:w-auto">
+              <a href="#chapter-list" className="bg-[#d97706] hover:bg-[#b45309] text-white font-mono text-xs md:text-sm font-bold uppercase tracking-widest py-3 px-4 md:px-8 flex items-center justify-center gap-2 transition-colors shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 whitespace-nowrap">
                 Baca Komik <ArrowRight className="w-4 h-4" />
               </a>
               <BookmarkButton comic={{ id: `komiku:${encodeURIComponent(manga.url)}`, title: manga.title, img: manga.img, type: "Manga", chapters: "?", readers: "0" }} />
-              
-              {/* TAMBAHKAN TOMBOL SHARE DI SINI */}
               <ShareButton title={manga.title} url={`https://komiknet.site/comic/${id}`} />
             </div>
           </div>
@@ -213,7 +209,7 @@ async function ComicDetailsWrapper({ params }: { params: Promise<{ id: string }>
     return (
       <>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-        <KomikuComicInfo manga={manga} id={id} /> {/* PASSING ID UNTUK SHARE */}
+        <KomikuComicInfo manga={manga} id={id} />
         <div id="chapter-list" className="mt-12">
           <div className="flex items-end justify-between border-b-2 border-gray-900 pb-4 mb-6">
             <h2 className="text-3xl font-black uppercase tracking-tighter">Indeks Chapter</h2>
@@ -240,7 +236,7 @@ async function ComicDetailsWrapper({ params }: { params: Promise<{ id: string }>
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <ComicInfo manga={manga} id={id} /> {/* PASSING ID UNTUK SHARE */}
+      <ComicInfo manga={manga} id={id} />
       <Suspense fallback={<LoadingState />}><ComicChapters id={id} /></Suspense>
     </>
   );
