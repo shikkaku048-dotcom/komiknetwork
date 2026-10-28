@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { ArrowLeft, Shield } from "lucide-react";
-import Header from "@/components/Header";
 
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen flex flex-col bg-[#f4f4f4] font-sans text-gray-900 selection:bg-amber-500 selection:text-white">
-      <Header />
       
       <main className="flex-grow w-full max-w-4xl mx-auto px-4 py-12">
         {/* Header Halaman */}

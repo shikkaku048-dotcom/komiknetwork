@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowLeft, ExternalLink, Loader2, AlertTriangle } from "lucide-react";
+import { ExternalLink, Loader2, AlertTriangle } from "lucide-react"; // ArrowLeft dihapus
 import { getChapterImages, getMangaChapters } from "@/lib/mangadex";
-// HAPUS: import { getComickChapterPages } from "@/lib/comick";
-import { getKomikuChapterPages, getKomikuMangaDetail } from "@/lib/komiku";
+import { getKomikuChapterPages } from "@/lib/komiku";
 import ContinuousReader from "@/components/ContinuousReader";
-import AutoNext from "@/components/AutoNext";
 import AdBanner from "@/components/AdBanner"; 
+import ReaderHeader from "@/components/ReaderHeader"; // Import Header Baru
 
 export async function generateMetadata(
   { params }: { params: Promise<{ id: string; chapterId: string }> }
@@ -54,70 +53,41 @@ async function ReaderContent({
   try { decodedId = decodeURIComponent(id); } catch(e) {}
 
   // ==========================================
-  // LOGIKA SUMBER ALTERNATIF (Komiku)
+  // LOGIKA SUMBER KOMIKU
   // ==========================================
-  if (source) {
+  if (source === "komiku") {
     let images: string[] = [];
     let nextChapterId = null;
     
     let finalChapterUrl = decodeUrlSafe(chapterId);
+    let komikuMangaUrl = decodedId.replace("komiku:", "");
 
     try {
-      // REVISI: Hanya memanggil komiku, karena comick sudah dihapus
-      if (source === "komiku") { 
-        images = await getKomikuChapterPages(finalChapterUrl);
-      }
+      const result = await getKomikuChapterPages(finalChapterUrl);
+      images = result.images;
 
-      if (source === "komiku" && decodedId.startsWith("komiku:")) {
-        const komikuMangaUrl = decodedId.replace("komiku:", "");
-        const mangaDetail = await getKomikuMangaDetail(komikuMangaUrl);
-
-        if (mangaDetail && mangaDetail.chapters && mangaDetail.chapters.length > 0) {
-          const sortedChapters = [...mangaDetail.chapters].sort(
-            (a, b) => (parseFloat(a.chapter) || 0) - (parseFloat(b.chapter) || 0)
-          );
-
-          const normalizeUrl = (u: string) => u.replace(/\/$/, "").toLowerCase();
-          const targetUrl = normalizeUrl(finalChapterUrl);
-
-          let currentIndex = sortedChapters.findIndex(
-            (c) => normalizeUrl(c.id) === targetUrl
-          );
-
-          if (currentIndex === -1) {
-            const match = finalChapterUrl.match(/(?:chapter|ch)-(\d+(\.\d+)?)/i);
-            if (match) {
-              const currentNum = parseFloat(match[1]);
-              currentIndex = sortedChapters.findIndex(c => (parseFloat(c.chapter) || 0) === currentNum);
-            }
-          }
-
-          if (currentIndex !== -1 && currentIndex < sortedChapters.length - 1) {
-            nextChapterId = encodeURIComponent(sortedChapters[currentIndex + 1].id);
-          }
-
-        } else {
-          const match = finalChapterUrl.match(/chapter-(\d+(\.\d+)?)/);
-          if (match) {
-            const currentNum = parseFloat(match[1]);
-            const nextNum = currentNum + 1;
-            const nextUrl = finalChapterUrl.replace(/chapter-\d+(\.\d+)?/, `chapter-${nextNum}`);
-            nextChapterId = encodeURIComponent(nextUrl);
-          }
-        }
+      if (result.nextUrl) {
+        nextChapterId = encodeURIComponent(result.nextUrl);
       }
     } catch (err) {
-      console.error(`[READER] Gagal memuat dari ${source}:`, err);
+      console.error(`[READER] Gagal memuat dari Komiku:`, err);
     }
 
     if (!images || images.length === 0) {
-      return <ErrorState id={id} message={`Gagal memuat gambar dari ${source}. Server sumber sedang membatasi akses atau scrapper-nya error.`} />;
+      return <ErrorState id={id} message="Gagal memuat gambar dari Komiku. Server sumber sedang membatasi akses atau scrapper error." />;
     }
 
+    const initialData = {
+      chapterId: chapterId,
+      chapterNumber: "?", 
+      images: images,
+      externalUrl: null,
+      nextChapterId: nextChapterId ? decodeURIComponent(nextChapterId) : null 
+    };
+
     return (
-      <main className="max-w-3xl mx-auto px-0 md:px-4 py-0 md:py-8 flex flex-col items-center">
-        
-        <div className="w-full px-4 md:px-0 mb-4">
+      <div className="w-full">
+        <div className="max-w-3xl mx-auto pt-4 px-4 md:px-0">
           <AdBanner 
             imageUrl="https://placehold.co/728x90/1a1a1a/ffffff?text=Dukung+Komik+Network,+Bebas+Iklan+dengan+Premium" 
             linkUrl="/subscription"
@@ -125,41 +95,13 @@ async function ReaderContent({
             isInternal={true}
           />
         </div>
-
-        {images.map((imgUrl: string, index: number) => (
-          <img 
-            key={index} 
-            src={`/api/image?url=${encodeURIComponent(imgUrl)}`} 
-            alt={`Halaman ${index + 1}`}
-            className="w-full max-w-full h-auto block bg-white" 
-            loading="lazy"
-          />
-        ))}
-        
-        {nextChapterId ? (
-          <AutoNext 
-            nextChapterId={nextChapterId} 
-            mangaId={id} 
-            source={source} 
-            mangaUrl={mangaUrl || komikuMangaUrlFallback(decodedId)} 
-          />
-        ) : (
-          <div className="w-full py-16 flex flex-col items-center justify-center border-t-2 border-gray-900 mt-8 bg-white font-mono text-center">
-            <h2 className="font-black text-gray-900 text-2xl uppercase tracking-tighter mb-2">
-              Akhir Chapter
-            </h2>
-            <p className="text-gray-500 text-xs uppercase tracking-widest mb-6">
-              Anda telah mencapai akhir chapter dari {source} (Chapter Terakhir)
-            </p>
-            <Link 
-              href={`/comic/${id}`} 
-              className="inline-flex items-center gap-2 bg-[#d97706] hover:bg-[#b45309] text-white px-8 py-3 text-xs font-bold uppercase tracking-widest shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all"
-            >
-              Kembali ke Detail
-            </Link>
-          </div>
-        )}
-      </main>
+        <ContinuousReader 
+          initialData={initialData} 
+          mangaId={id} 
+          source="komiku" 
+          mangaUrl={komikuMangaUrl} 
+        />
+      </div>
     );
   }
 
@@ -230,14 +172,6 @@ async function ReaderContent({
   );
 }
 
-function komikuMangaUrlFallback(decodedId: string) {
-  try {
-    return decodedId.replace("komiku:", "");
-  } catch {
-    return "";
-  }
-}
-
 function ErrorState({ id, message }: { id: string, message: string }) {
   let decodedId = id;
   try { decodedId = decodeURIComponent(id); } catch(e) {}
@@ -254,7 +188,6 @@ function ErrorState({ id, message }: { id: string, message: string }) {
   );
 }
 
-// REVISI: Menjadikan fungsi ini async agar bisa mengambil ID komik untuk tombol Back
 export default async function ChapterReaderPage({ 
   params,
   searchParams
@@ -267,14 +200,9 @@ export default async function ChapterReaderPage({
 
   return (
     <div className="min-h-screen bg-[#f4f4f4] pb-0 font-sans">
-      <header className="bg-white border-b-2 border-gray-900 sticky top-0 z-50">
-        <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
-          {/* REVISI: Link diarahkan ke /comic/${comicId} */}
-          <Link href={`/comic/${comicId}`} className="flex items-center text-gray-900 hover:text-amber-600 font-mono font-bold text-xs uppercase tracking-widest transition-colors">
-            <ArrowLeft className="w-4 h-4 mr-2" />Kembali ke Detail
-          </Link>
-        </div>
-      </header>
+      
+      {/* HEADER BARU YANG BISA AUTO-HIDE */}
+      <ReaderHeader comicId={comicId} />
       
       <Suspense fallback={
         <div className="max-w-3xl mx-auto px-4 py-20 flex flex-col items-center justify-center font-mono text-xs uppercase tracking-widest text-gray-500">
