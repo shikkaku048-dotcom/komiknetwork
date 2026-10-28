@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export default function ReaderHeader({ comicId }: { comicId: string }) {
@@ -11,22 +10,22 @@ export default function ReaderHeader({ comicId }: { comicId: string }) {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
-      // Jika scroll ke bawah dan melewati 60px, sembunyikan header
       if (currentScrollY > lastScrollY && currentScrollY > 60) {
         setIsVisible(false);
-      } 
-      // Jika scroll ke atas, munculkan header
-      else {
+      } else {
         setIsVisible(true);
       }
-      
       setLastScrollY(currentScrollY);
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
+
+  const handleBack = () => {
+    // TRIK BRUTAL: Paksa pindah ke Detail dengan Hard Reload.
+    window.location.href = `/comic/${comicId}`;
+  };
 
   return (
     <header
@@ -35,12 +34,12 @@ export default function ReaderHeader({ comicId }: { comicId: string }) {
       }`}
     >
       <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
-        <Link
-          href={`/comic/${comicId}`}
+        <button
+          onClick={handleBack}
           className="flex items-center text-gray-900 hover:text-amber-600 font-mono font-bold text-xs uppercase tracking-widest transition-colors"
         >
           <ArrowLeft className="w-4 h-4 mr-2" /> Kembali ke Detail
-        </Link>
+        </button>
       </div>
     </header>
   );
